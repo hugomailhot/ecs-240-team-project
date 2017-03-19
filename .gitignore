@@ -1,2 +1,10 @@
 # 
 nohup\.out
+*.pdf
+*.log
+*.aux
+*.fdb_latexmk
+*.fls
+*.gz
+*.sw[o-z]
+*.out

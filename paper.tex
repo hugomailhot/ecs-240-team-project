@@ -1,0 +1,163 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%2345678901234567890123456789012345678901234567890123456789012345678901234567890
+%        1         2         3         4         5         6         7         8
+
+\documentclass[letterpaper, 10 pt, conference]{ieeeconf} 
+
+\IEEEoverridecommandlockouts                              % This command is only
+                                                          % needed if you want to
+                                                          % use the \thanks command
+\overrideIEEEmargins
+% See the \addtolength command later in the file to balance the column lengths
+% on the last page of the document
+
+
+
+% The following packages can be found on http:\\www.ctan.org
+%\usepackage{graphics} % for pdf, bitmapped graphics files
+%\usepackage{epsfig} % for postscript graphics files
+%\usepackage{mathptmx} % assumes new font selection scheme installed
+%\usepackage{times} % assumes new font selection scheme installed
+%\usepackage{amsmath} % assumes amsmath package installed
+%\usepackage{amssymb}  % assumes amsmath package installed
+\usepackage{xcolor}
+
+\title{\LARGE \bf
+A Formal Description of Bitcoin's Script Language
+}
+
+\author{ \parbox{4 in}{
+                        \centering Domenic Cianfichi, Hugo Mailhot and Joseph McGee
+                        Department of Computer Science\\
+                        University of California, Davis\\
+                        1 Shields Ave, Davis, CA 95616, USA
+                      }
+}
+
+
+\begin{document}
+
+
+
+\maketitle
+\thispagestyle{empty}
+\pagestyle{empty}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+
+Bitcoin transactions are validated using a specialized language called Script. Despite the critical role it plays in the Bitcoin network, so far no formal description of the language has been developed to allow reasoning about the expressive power of the language. The recent years have shown that a lack of understanding of Script made it possible to create valid programs with undesirable behavior. Furthermore, the Bitcoin community acknowledges that standard transaction script formats, and maybe Script itself, might be changed in the future. In a first step to allow rigorous reasoning about Script's expressivity and limitations, we present a formal description of the language, along with example analyses that illustrate the usefulness of such a description.
+
+\end{abstract}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{INTRODUCTION}
+
+\textcolor{red}{\textit{To describe and motivate the problem or your survey topic }}\\
+
+Script is what Bitcoin uses to encode transactions over the network. It is purposefully restricted, and most notably lacks a mechanism for looping and guarantees termination. To properly learn the language and understand its semantics, one must read through the catalog of \textit{opcodes} (hex values used as operators) and analyze its C++ reference implementation.
+
+As a postfix language written in sequences of bytes, Script is not an easy language to pick up and understand. It is even harder to assess the effect that proposed modifications to the language might have on the guarantees that it must provide. In the past, Script has been progressively restricted in response to discovered vulnerabilities in the language. The restrictions eliminated the vulnerabilities, at the cost of reducing the expressiveness of the language. It is not clear that all of the restrictions added were necessary to produce the desired end of securing the language. A formal description and eventually specification would help in such determinations, allowing more objective and precise decisions.
+
+As Bitcoin's economic presence grows, formal specifications, abstracted away from current current implementations of the Bitcoin protocol, will become increasingly essential in mediating conflict over what Bitcoin is or should be, allowing participants in the Bitcoin community to reason formally and precisely about their opinions and proposals.
+
+\textcolor{blue}{[Describe history of Script and Bitcoin maybe, say the language was flawed]}
+
+\textcolor{blue}{[Mention [3] when it says that "These limitations are encoded in a function called isStandard(), which defines five types of "standard" transactions. These limitations are temporary and might be lifted by the time you read this."
+The transaction programs being subject to change justifies allowing formal reasoning about the language.]}
+
+
+
+\section{APPROACH}
+
+\textcolor{red}{\textit{Detailed description of the approach, and highlight the main technical difficulties and novelties. }}\\
+
+\subsection{Definition of Script Grammar}
+
+\subsubsection{Syntax}
+\# Bitcoin wiki -> tables describe the format\\
+\# transaction is X Y, inputs are such and such\\
+\# looked at enums in source code to get full list of defined opcode and their hex values\\
+JOSEPH: also explain how the different syntactic groups were broken down\\
+
+\subsubsection{Operational semantics}
+
+We described the big-step semantics and the small-step semantics of the language using a combination of the reference implementation of the language [Ref] and of the Script page of the Bitcoin wiki [Ref].
+
+\subsubsection{Difficulties encountered}
+
+
+  1) The source code of a script program is just a sequence of bytes and is not human-readable. To make documentation easier, the creators of the language defined an alias (\textit{opcode}) for each command. We first thought that the whole language could be described using only the opcodes, without referring to byte sequences as such, but the very semantics of certain commands made this impossible (see for example the \texttt{OP\_PUSHDATA} commands in Section 2 of the appendix). It took us a few tries to come up with a notation precise enough to describe source code as byte sequences, and yet elegant enough to allow concise expression of the semantics.
+
+
+\subsection{Application of Script Grammar}
+
+[Describe how grammar was used]
+
+\section{APPLICATIONS AND RESULTS}
+
+ \textcolor{red}{\textit{If appropriate, you should describe your implementation and experimental results. Explain how to interpret your numbers and results if applicable.}}
+
+\textcolor{blue}{[Motivation for the application cases we chose.]}
+
+
+
+\subsection{Programs written in the current version of Script halt within time linear in the length of the program}
+
+For the Bitcoin network to function properly, it is important that the network form a single connected component. A type of attack against the network is to try and cut some nodes from the rest of the network, and then ``double-spend'' the same amount of money on the two disconnected components, which will both accept the transactions. Such a cut can be achieved by performing a DoS attack against a group of nodes that collectively ensure connectivity between two otherwise separated subnetworks. One way to perform a DoS attack could be to have a node attempt to evaluate a Script program with an unreasonable execution time. It is therefore important to guarantee that a Script program will terminate within a certain amount of steps.
+
+Using the small-step semantics defined in Section 3 of the appendix, we see that no reduction rule yields its entire input, as was the case with the \texttt{while} local reduction rule in IMP. That is to say, no recursion is allowed. At most a proper subset of the input is conserved after applying the rule, when it is not completely replaced by \texttt{OP\_NOP}, Script's equivalent of the \texttt{skip} command. This guarantees that every small-step reduction progresses towards termination of the program. Furthermore, the global reduction rule trivially entails that for any program that is not only \texttt{OP\_NOP}, there exists a unique context reducible by a local reduction rule. Thus we have that every Script program halts.
+
+We also know, from our description of Script's big-step semantics in Section 2 of the appendix, that every command requires a constant number of checks and operations on the stack. 
+
+So we have that a Script program will always halt, and that the number of operations required to evaluate it is at most linear in the amount of commands it contains.
+
+
+\subsection{Previous versions of Script allowed undesirable programs}
+Here we prove how previous states were problematic
+
+\subsection{The Script command set could be reduced without loss of expressiveness}
+Here we prove that some commands are redundant. Must exaplin why this can be desirable sometimes, but also why some of them are clearly uselessly redundant.
+
+
+\section{RELATED WORK}
+
+
+\textcolor{red}{\textit{Detailed discussion of related work. Should stress how these relate to your work. Simply list and describe what other people did is not sufficient.}}\\
+
+\textcolor{blue}{COMPLETELY REVISE THIS}
+
+The best documentation for Script exists on the Bitcoin wiki [2].  This documentation is written in plain English, and not in a logical formalism that allows mathematical reasoning. To our knowledge, no previous effort has been made to provide a formal specification of Script. If we turn to Forth to find something related, we can find standard specifications like the Forth-83 standard (http://forth.sourceforge.net/standard/fst83/fst83-12.htm). However even these specifications are also given in plain English.
+
+
+\section{CONCLUSIONS}
+
+\textcolor{red}{\textit{Again summarize the work and discuss possible future work.}}\\
+
+\addtolength{\textheight}{-12cm}   % This command serves to balance the column lengths
+                                  % on the last page of the document manually. It shortens
+                                  % the textheight of the last page by a suitable amount.
+                                  % This command does not take effect until the next page
+                                  % so it should come on the page before the last. Make
+                                  % sure that you do not shorten the textheight too much.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\begin{thebibliography}{99}
+\bibitem{c1} Bitcoin Core. (March 2017). \textit{Bitcoin Core} [Online; Accessed: 15-March-2017]. Available: https://github.com/bitcoin/bitcoin.
+
+\bibitem{c2} Bitcoin Wiki. (March 2017). \textit{Script} [Online; Accessed: 15-March-2017]. Available: https://en.bitcoin.it/wiki/Script.
+
+\bibitem{c3} Andreas M. Antonopoulos. (October 18 2016). \textit{Mastering Bitcoin - Unlocking digital currencies} [Online; Accessed: 15-March-2017]. Available: https://github.com/bitcoinbook/bitcoinbook.
+
+
+\end{thebibliography}
+
+
+
+
+\end{document}
