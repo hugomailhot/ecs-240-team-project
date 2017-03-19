@@ -106,9 +106,9 @@ For the Bitcoin network to function properly, it is important that the network f
 
 Using the small-step semantics defined in Section 3 of the appendix, we see that no reduction rule yields its entire input, as was the case with the \texttt{while} local reduction rule in IMP. That is to say, no recursion is allowed. At most a proper subset of the input is conserved after applying the rule, when it is not completely replaced by \texttt{OP\_NOP}, Script's equivalent of the \texttt{skip} command. This guarantees that every small-step reduction progresses towards termination of the program. Furthermore, the global reduction rule trivially entails that for any program that is not only \texttt{OP\_NOP}, there exists a unique context reducible by a local reduction rule. Thus we have that every Script program halts.
 
-We also know, from our description of Script's big-step semantics in Section 2 of the appendix, that every command requires a constant number of checks and operations on the stack. 
+We also know, from our description of Script's big-step semantics in Section 2 of the appendix, that every command requires a constant number of checks and operations on the stack. So we have that a Script program will always halt, and that the number of operations required to evaluate it is at most linear in the amount of commands it contains.
 
-So we have that a Script program will always halt, and that the number of operations required to evaluate it is at most linear in the amount of commands it contains.
+Given that the main nodes on the Bitcoin network enforce a limit on the length of Script programs one can include in a transaction, guaranteed linear execution time results in an absolute maximum number of steps for a standard Script program. This helps in protecting against DoS attacks based on maliciously crafted transactions. Furthermore, this maximum number of steps was deliberately lowered by requiring that the most computationally expensive opcodes, \texttt{OP\_CHECKSIG}, be contained exactly once in a valid standard transaction [4].
 
 
 \subsection{Previous versions of Script allowed undesirable programs}
@@ -154,6 +154,7 @@ The reference implementation is much more thorough that the wiki but, being c++ 
 
 \bibitem{c3} Andreas M. Antonopoulos. (October 18 2016). \textit{Mastering Bitcoin - Unlocking digital currencies} [Online; Accessed: 15-March-2017]. Available: https://github.com/bitcoinbook/bitcoinbook.
 
+\bibitem{c4} CVE Details. (March 3 2012). \textit{Vulnerability Details : CVE-2013-2292} [Online; Accessed: 15-March-2017]. Available: https://www.cvedetails.com/cve-details.php?t=1\&cve\_id=CVE-2013-2292.
 
 \end{thebibliography}
 
