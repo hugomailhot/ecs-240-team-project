@@ -82,19 +82,18 @@ JOSEPH: also explain how the different syntactic groups were broken down\\
 
 We described the big-step semantics and the small-step semantics of the language using a combination of the reference implementation of the language [Ref] and of the Script page of the Bitcoin wiki [Ref].
 
-\subsubsection{Difficulties encountered}
-
-
-  1) The source code of a script program is just a sequence of bytes and is not human-readable. To make documentation easier, the creators of the language defined an alias (\textit{opcode}) for each command. We first thought that the whole language could be described using only the opcodes, without referring to byte sequences as such, but the very semantics of certain commands made this impossible (see for example the \texttt{OP\_PUSHDATA} commands in Section 2 of the appendix). It took us a few tries to come up with a notation precise enough to describe source code as byte sequences, and yet elegant enough to allow concise expression of the semantics.
-
 
 \subsection{Application of Script Grammar}
 
 [Describe how grammar was used]
 
-\subsubsection{Difficulties encountered}
+\subsection{Difficulties encountered}
 
-1) It was our hope that we could define operational semantics for op codes of previous versions of Script that caused crashes or other issues in the past.  Using these definitions, we would then show that the old definitions could be used to cause problems.  Unfortunately, there is very little documentation regarding how these errors came about.  The reference documentation itself only documents changes back to 2014 while most of the serious problems with Script were fixed in 2010. The only fix we were able to analyze was the change to \texttt{OP\_RETURN}.  
+$\bullet$ The source code of a script program is just a sequence of bytes and is not human-readable. To make documentation easier, the creators of the language defined an alias (\textit{opcode}) for each command. We first thought that the whole language could be described using only the opcodes, without referring to byte sequences as such, but the very semantics of certain commands made this impossible (see for example the \texttt{OP\_PUSHDATA} commands in Section 2 of the appendix). It took us a few tries to come up with a notation precise enough to describe source code as byte sequences, and yet elegant enough to allow concise expression of the semantics.
+
+$\bullet$ It was our hope that we could define operational semantics for op codes of previous versions of Script that caused crashes or other issues in the past.  Using these definitions, we would then show that the old definitions could be used to cause problems.  Unfortunately, there is very little documentation regarding how these errors came about.  The reference documentation itself only documents changes back to 2014 while most of the serious problems with Script were fixed in 2010. The only fix we were able to analyze was the change to \texttt{OP\_RETURN}.
+
+$\bullet$ \texttt{OP\_CHECKSIG} is a bitch to describe.  
 
 \section{APPLICATIONS AND RESULTS}
 
