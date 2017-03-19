@@ -127,13 +127,11 @@ Here we prove that some commands are redundant. Must exaplin why this can be des
 
 \textcolor{red}{\textit{Detailed discussion of related work. Should stress how these relate to your work. Simply list and describe what other people did is not sufficient.}}\\
 
-\textcolor{blue}{COMPLETELY REVISE THIS}
+To our knowledge, there has been no previous effort to provide a formal specification of the Script language. As a result, the existing documentation works as a rough guideline for our work but is not complete. Explanations of how Script works are located on the Bitcoin wiki [2] and the reference implementation [1].  
 
-To our knowledge, there has been no previous effort to provide a formal specification of the Script language.  As a result, the existing documentation works as a rough guideline for our work but is not complete.  Explanations of how Script works are located on the bitcoin wiki [2] and the reference implementation [1].  
+The Bitcoin wiki is an explanation of how each opcode works in plain English. The explanations are not rigorous, and are not in a logical formalism that allows mathematical reasoning. There are many situations where descriptions are vague and can be interpreted in more than one way.  For example, the explanation of \texttt{OP\_LEFT} takes an argument to index a string and throws away everything to the right of the index, but it does not specify whether that operation is right-inclusive.
 
-The bitcoin wiki is an explanation of how each opcode works in plain english. The explanations are not rigorous, and are not in a logical formalism that allows mathematical reasoning.  There are many situations where descriptions are vague and can be interpreted in more than one way.  For example, the explanation of OP\_LEFT takes an argument to index a string and throws away everything to the right of the index, but it doesnt tell us if that operation is right-inclusive.  
-
-The reference implementation is much more thorough that the wiki but, being c++ code, it is much harder to interpret and is not in a format that allows for logical reasoning.  If we turn to Forth to find something related, we can find standard specifications like the Forth-83 standard (http://forth.sourceforge.net/standard/fst83/fst83-12.htm). However even these specifications are given in plain English.
+The reference implementation is much more thorough that the wiki but, being C++ code, it is much harder to interpret and is not in a format that allows for logical reasoning. If we turn to Forth to find something related, we can find standard specifications like the Forth-83 standard (http://forth.sourceforge.net/standard/fst83/fst83-12.htm). However even these specifications are given in plain English.
 
 
 \section{CONCLUSIONS}
