@@ -1,0 +1,1868 @@
+\documentclass{article}
+\usepackage{fullpage} % make the margins a reasonable size
+\usepackage{amsmath}  % some handy math symbols
+\usepackage{amssymb}  % more handy math symbols
+\usepackage{amsthm}   % this is necessary to create theorems/lemmas/etc.
+\usepackage{mathtools}
+\usepackage[utf8]{inputenc}
+\usepackage{mathpartir}
+\usepackage{hyperref}
+\usepackage{pdfpages}
+\usepackage{multicol}
+\usepackage{ulem}
+
+\begin{document}
+
+\IfFileExists{main.pdf}{\includepdf{main.pdf}}{}
+
+\title{Script Grammar}
+\date{}
+\maketitle
+
+
+\section{Intdoduction}
+
+Script is a constrained stack-based language inspired by Forth.
+
+Script programs (scripts) exist within Bitcoin transactions, which eventually are finalized or irrevocably committed to the global state of the Bitcoin network by their inclusion in a block which exists in the block-chain with the most proof of work expended.
+
+Transactions consist of inputs and outputs, both of which include scripts. A transaction input script \textit{unlocks} bitcoins; a transaction output script \textit{locks} bitcoins. An input references the output of a previous transaction and provides a script which yields $\sigma_0$ when run. In order for the input to successfully unlock the bitcoins locked up in the referenced output, said output's script must yield $\sigma_1 = \sigma[V = valid]$ when run with it's state initialized to the state $\sigma_0$--yielded by the unlocking/input/spending script.
+
+
+Script program syntax is defined in terms of byte-commands. Each command is one byte long. Not all bytes are defined as valid commands and many bytes which are defined have syntactic restrictions on the following program bytes which must hold in order for the program to be well-formed. Script defines 173 such commands, each corresponding to a particular byte, also called \textit{words} or \textit{opcodes}. For example, the command that adds 1 to the value on top of the stack, is written \texttt{0x8b}. These opcodes have human-readable aliases to make description of the language easier. For example, the opcode \texttt{0x8b} is referred to as \texttt{OP\_1ADD} in the reference implementation's source code and documentation.
+
+Script is intentionally constrainted: There language does not allow for the expression of loops or recursion. This is desirable, guaranteeing that the runtime of a Script program is linear with the size of the program.
+
+Script is defined by the specification provided by the reference implementation. 
+Script is  as sequences of bytecodes. In describing its semantics, we will generally not refer to the format of the values, but some commands in the language only have meaning if we take into account the fact that any part of a Script program is a byte vector. For this reason, we define byte vectors as the following, and will reserve \texttt{b} and \texttt{B} to express a byte and a byte vector, respectively.
+
+\hyperlink{OPSEM}{Section 2} presents a consistent and exhaustive BNF describing Script's syntax.
+
+\hyperlink{OPSEM}{Section 3} specifies the operational semantics of the syntactic constructs defined in \hyperlink{OPSEM}{Section 2}.
+\section{Syntax}
+
+\subsection{Fundamental data types}
+\noindent
+\texttt{b ::= 0x00 | 0x01 | ... | 0xFF} \\
+\texttt{B ::= b | b B} \\
+\texttt{b$_i$ ::= b} \\
+\texttt{B$^n$ ::= b$_1$ b$_2$ ... b$_n$} \\
+\texttt{varint ::= }
+
+\subsection{Transactions}
+\noindent
+\texttt{tx ::= tx\_version tx\_numin tx\_inputs tx\_numout tx\_outputs tx\_locktime  } \\
+\texttt{tx\_version ::= B$^4$  } \\
+\texttt{tx\_numin ::= varint  } \\
+\texttt{tx\_inputs ::= txin | txin tx\_inputs   } \\
+\texttt{tx\_numout ::= varint  } \\
+\texttt{tx\_outputs ::= txout | txout tx\_outputs  } \\
+\texttt{tx\_locktime ::= B$^4$  }
+
+\subsubsection{Transaction Inputs}
+\noindent
+\texttt{txin ::= txin\_prevhash txin\_index txin\_scriptlen txin\_script txin\_seqno} \\
+\texttt{txin\_prevhash ::= B$^{256}$} \\
+\texttt{txin\_index ::= B$^4$} \\
+\texttt{txin\_scriptlen ::= varint} \\
+\texttt{txin\_script ::= script} \\
+\texttt{txin\_seqno ::= B$^4$}
+
+\subsubsection{Transaction Outputs}
+\noindent
+\texttt{txout ::= txout\_value txout\_scriptlen txout\_script  } \\
+\texttt{txout\_value ::= B$^8$} \\
+\texttt{txout\_scriptlen ::= varint} \\
+\texttt{txout\_script ::= script}
+
+\subsection{Script}
+\noindent
+\texttt{script ::= com | com script} \\
+\texttt{com ::= scom | mcom}
+
+\subsubsection{Single-Word Commands}
+\noindent \hangindent=0.7cm
+\texttt{scom ::=
+  scom\_push | scom\_control | scom\_stack | scom\_splice | scom\_bitlogic |
+  scom\_numeric | scom\_crypto | scom\_expansion | scom\_template} \\
+
+\noindent \hangindent=0.7cm
+\texttt{scom\_push ::=
+  OP\_0 | OP\_FALSE | OP\_1NEGATE | \sout{OP\_RESERVED} | OP\_1 | OP\_TRUE |
+  OP\_2 | OP\_3 | OP\_4 | OP\_5 | OP\_6 | OP\_7 | OP\_8 | OP\_9 | OP\_10 |
+  OP\_11 | OP\_12 | OP\_13 | OP\_14 | OP\_15 | OP\_16} \\
+
+\noindent \hangindent=0.7cm
+\texttt{scom\_control ::=
+ OP\_NOP | \sout{OP\_VER} | \sout{OP\_VERIF} | \sout{OP\_VERNOTIF} | OP\_VERIFY
+ | OP\_RETURN} \\
+
+\noindent \hangindent=0.7cm
+\texttt{scom\_stack ::=
+  OP\_TOALTSTACK | OP\_FROMALTSTACK | OP\_2DROP | OP\_2DUP | OP\_3DUP |
+  OP\_2OVER | OP\_2ROT | OP\_2SWAP | OP\_IFDUP | OP\_DEPTH | OP\_DROP | OP\_DUP
+  | OP\_NIP | OP\_OVER | OP\_PICK | OP\_ROLL | OP\_ROT | OP\_SWAP | OP\_TUCK}
+  \\
+
+\noindent \hangindent=0.7cm
+\texttt{scom\_splice ::=
+  \sout{OP\_CAT }| \sout{OP\_SUBSTR} | \sout{OP\_LEFT} | \sout{OP\_RIGHT} |
+  OP\_SIZE} \\
+
+\noindent \hangindent=0.7cm
+\texttt{scom\_bitlogic ::=
+  \sout{OP\_INVERT} | \sout{OP\_AND} | \sout{OP\_OR} | \sout{OP\_XOR} |
+  OP\_EQUAL | OP\_EQUALVERIFY | \sout{OP\_RESERVED1} | \sout{OP\_RESERVED2}} \\
+
+\noindent \hangindent=0.7cm
+\texttt{scom\_numeric ::=
+  OP\_1ADD | OP\_1SUB | \sout{OP\_2MUL} | \sout{OP\_2DIV} | OP\_NEGATE |
+  OP\_ABS | OP\_NOT | OP\_0NOTEQUAL | OP\_ADD | OP\_SUB | \sout{OP\_MUL} |
+  \sout{OP\_DIV} | \sout{OP\_MOD} | \sout{OP\_LSHIFT} | \sout{OP\_RSHIFT} |
+  OP\_BOOLAND | OP\_BOOLOR | OP\_NUMEQUAL | OP\_NUMEQUALVERIFY |
+  OP\_NUMNOTEQUAL | OP\_LESSTHAN | OP\_GREATERTHAN | OP\_LESSTHANOREQUAL |
+  OP\_GREATERTHANOREQUAL | OP\_MIN | OP\_MAX | OP\_WITHIN} \\
+
+\noindent \hangindent=0.7cm
+\texttt{scom\_crypto ::=
+  OP\_RIPEMD160 | OP\_SHA1 | OP\_SHA256 | OP\_HASH160 | OP\_HASH256 |
+  OP\_CODESEPARATOR | OP\_CHECKSIG | OP\_CHECKSIGVERIFY | OP\_CHECKMULTISIG |
+  OP\_CHECKMULTISIGVERIFY} \\
+
+\noindent \hangindent=0.7cm
+\texttt{scom\_expansion ::=
+  \sout{OP\_NOP1} | OP\_CHECKLOCKTIMEVERIFY | OP\_NOP2 |
+  OP\_CHECKSEQUENCEVERIFY | OP\_NOP3 | \sout{OP\_NOP4} | \sout{OP\_NOP5} |
+  \sout{OP\_NOP6} | \sout{OP\_NOP7} | \sout{OP\_NOP8} | \sout{OP\_NOP9} |
+  \sout{OP\_NOP10}} \\
+
+\noindent \hangindent=0.7cm
+\texttt{scom\_template ::=
+  \sout{OP\_SMALLINTEGER} | \sout{OP\_PUBKEYS} | \sout{OP\_PUBKEYHASH} |
+  \sout{OP\_PUBKEY} | \sout{OP\_INVALIDOPCODE}}
+
+\subsubsection{Multiple-Word Commands}
+\noindent \hangindent=0.7cm
+\texttt{mcom ::= mcom\_if | mcom\_notif | mcom\_push} \\
+
+% compund control commands
+\noindent
+\texttt{mcom\_if ::= OP\_IF script OP\_ENDIF | OP\_IF script mcom\_else OP\_ENDIF} \\
+\texttt{mcom\_notif ::= OP\_NOTIF script OP\_ENDIF | OP\_NOTIF script mcom\_else OP\_ENDIF} \\
+\texttt{mcom\_else ::= OP\_ELSE script | OP\_ELSE script mcom\_else } \\
+
+% compound push commands
+\noindent \hangindent=0.7cm
+\texttt{mcom\_push ::=
+  OP\_PUSHBYTES$_N$ B$^N$ | OP\_PUSHDATA1 B$^1$ B |OP\_PUSHDATA2 B$^2$ B
+  | OP\_PUSHDATA4 B$^4$ B}
+  
+\subsubsection{Disabled Commands}
+\noindent \hangindent=0.7cm
+\texttt{dcom ::=
+  dcom\_push | dcom\_control | dcom\_stack | dcom\_splice | dcom\_bitlogic |
+  dcom\_numeric | dcom\_crypto | dcom\_expansion | dcom\_template} \\
+
+\noindent \hangindent=0.7cm
+\texttt{dcom\_push ::= \sout{OP\_RESERVED}} \\
+
+\noindent \hangindent=0.7cm
+\texttt{scom\_control ::=
+ \sout{OP\_VER} | \sout{OP\_VERIF} | \sout{OP\_VERNOTIF}} \\
+
+\noindent \hangindent=0.7cm
+\texttt{dcom\_stack ::= } \\
+
+\noindent \hangindent=0.7cm
+\texttt{dcom\_splice ::=
+  \sout{OP\_CAT }| \sout{OP\_SUBSTR} | \sout{OP\_LEFT} | \sout{OP\_RIGHT}
+  } \\
+
+\noindent \hangindent=0.7cm
+\texttt{dcom\_bitlogic ::=
+  \sout{OP\_INVERT} | \sout{OP\_AND} | \sout{OP\_OR} | \sout{OP\_XOR} |
+  \sout{OP\_RESERVED1} | \sout{OP\_RESERVED2}} \\
+
+\noindent \hangindent=0.7cm
+\texttt{dcom\_numeric ::=
+  \sout{OP\_2MUL} | \sout{OP\_2DIV} | \sout{OP\_MUL} |
+  \sout{OP\_DIV} | \sout{OP\_MOD} | \sout{OP\_LSHIFT} | \sout{OP\_RSHIFT}} \\
+
+\noindent \hangindent=0.7cm
+\texttt{dcom\_crypto ::=} \\
+
+\noindent \hangindent=0.7cm
+\texttt{dcom\_expansion ::=
+  \sout{OP\_NOP1} | \sout{OP\_NOP4} | \sout{OP\_NOP5} |
+  \sout{OP\_NOP6} | \sout{OP\_NOP7} | \sout{OP\_NOP8} | \sout{OP\_NOP9} |
+  \sout{OP\_NOP10}} \\
+
+\noindent \hangindent=0.7cm
+\texttt{dcom\_template ::=
+  \sout{OP\_SMALLINTEGER} | \sout{OP\_PUBKEYS} | \sout{OP\_PUBKEYHASH} |
+  \sout{OP\_PUBKEY} | \sout{OP\_INVALIDOPCODE}}
+
+
+\pagebreak
+
+\subsubsection{OP Codes}
+
+\begin{multicols}{3}
+
+\textbf{\centering push value} \\
+\texttt{OP\_0 ::= 0x00  } \\
+\texttt{OP\_FALSE ::= OP\_0  } \\
+\texttt{{OP\_PUSHBYTES$^N$} ::= 0x01-0x4b} \\
+\texttt{OP\_PUSHDATA1 ::= 0x4c  } \\
+\texttt{OP\_PUSHDATA2 ::= 0x4d  } \\
+\texttt{OP\_PUSHDATA4 ::= 0x4e  } \\
+\texttt{OP\_1NEGATE ::= 0x4f  } \\
+\texttt{OP\_RESERVED ::= 0x50  } \\
+\texttt{OP\_1 ::= 0x51  } \\
+\texttt{OP\_TRUE::=OP\_1  } \\
+\texttt{OP\_2 ::= 0x52  } \\
+\texttt{OP\_3 ::= 0x53  } \\
+\texttt{OP\_4 ::= 0x54  } \\
+\texttt{OP\_5 ::= 0x55  } \\
+\texttt{OP\_6 ::= 0x56  } \\
+\texttt{OP\_7 ::= 0x57  } \\
+\texttt{OP\_8 ::= 0x58  } \\
+\texttt{OP\_9 ::= 0x59  } \\
+\texttt{OP\_10 ::= 0x5a  } \\
+\texttt{OP\_11 ::= 0x5b  } \\
+\texttt{OP\_12 ::= 0x5c  } \\
+\texttt{OP\_13 ::= 0x5d  } \\
+\texttt{OP\_14 ::= 0x5e  } \\
+\texttt{OP\_15 ::= 0x5f  } \\
+\texttt{OP\_16 ::= 0x60  } \\
+
+\textbf{\centering control} \\
+\texttt{OP\_NOP ::= 0x61  } \\
+\texttt{OP\_VER ::= 0x62  } \\
+\texttt{OP\_IF ::= 0x63  } \\
+\texttt{OP\_NOTIF ::= 0x64  } \\
+\texttt{OP\_VERIF ::= 0x65  } \\
+\texttt{OP\_VERNOTIF ::= 0x66  } \\
+\texttt{OP\_ELSE ::= 0x67  } \\
+\texttt{OP\_ENDIF ::= 0x68  } \\
+\texttt{OP\_VERIFY ::= 0x69  } \\
+\texttt{OP\_RETURN ::= 0x6a  } \\
+
+\textbf{\centering stack ops} \\
+\texttt{OP\_TOALTSTACK ::= 0x6b  } \\
+\texttt{OP\_FROMALTSTACK ::= 0x6c  } \\
+\texttt{OP\_2DROP ::= 0x6d  } \\
+\texttt{OP\_2DUP ::= 0x6e  } \\
+\texttt{OP\_3DUP ::= 0x6f  } \\
+\texttt{OP\_2OVER ::= 0x70  } \\
+\texttt{OP\_2ROT ::= 0x71  } \\
+\texttt{OP\_2SWAP ::= 0x72  } \\
+\texttt{OP\_IFDUP ::= 0x73  } \\
+\texttt{OP\_DEPTH ::= 0x74  } \\
+\texttt{OP\_DROP ::= 0x75  } \\
+\texttt{OP\_DUP ::= 0x76  } \\
+\texttt{OP\_NIP ::= 0x77  } \\
+\texttt{OP\_OVER ::= 0x78  } \\
+\texttt{OP\_PICK ::= 0x79  } \\
+\texttt{OP\_ROLL ::= 0x7a  } \\
+\texttt{OP\_ROT ::= 0x7b  } \\
+\texttt{OP\_SWAP ::= 0x7c  } \\
+\texttt{OP\_TUCK ::= 0x7d  } \\
+
+\textbf{\centering splice ops} \\
+\texttt{OP\_CAT ::= 0x7e  } \\
+\texttt{OP\_SUBSTR ::= 0x7f  } \\
+\texttt{OP\_LEFT ::= 0x80  } \\
+\texttt{OP\_RIGHT ::= 0x81  } \\
+\texttt{OP\_SIZE ::= 0x82  } \\
+
+\textbf{\centering bit logic} \\
+\texttt{OP\_INVERT ::= 0x83  } \\
+\texttt{OP\_AND ::= 0x84  } \\
+\texttt{OP\_OR ::= 0x85  } \\
+\texttt{OP\_XOR ::= 0x86  } \\
+\texttt{OP\_EQUAL ::= 0x87  } \\
+\texttt{OP\_EQUALVERIFY ::= 0x88  } \\
+\texttt{OP\_RESERVED1 ::= 0x89  } \\
+\texttt{OP\_RESERVED2 ::= 0x8a  } \\
+
+\textbf{\centering numeric} \\
+\texttt{OP\_1ADD ::= 0x8b  } \\
+\texttt{OP\_1SUB ::= 0x8c  } \\
+\texttt{OP\_2MUL ::= 0x8d  } \\
+\texttt{OP\_2DIV ::= 0x8e  } \\
+\texttt{OP\_NEGATE ::= 0x8f  } \\
+\texttt{OP\_ABS ::= 0x90  } \\
+\texttt{OP\_NOT ::= 0x91  } \\
+\texttt{OP\_0NOTEQUAL ::= 0x92  } \\
+\texttt{OP\_ADD ::= 0x93  } \\
+\texttt{OP\_SUB ::= 0x94  } \\
+\texttt{OP\_MUL ::= 0x95  } \\
+\texttt{OP\_DIV ::= 0x96  } \\
+\texttt{OP\_MOD ::= 0x97  } \\
+\texttt{OP\_LSHIFT ::= 0x98  } \\
+\texttt{OP\_RSHIFT ::= 0x99  } \\
+\texttt{OP\_BOOLAND ::= 0x9a  } \\
+\texttt{OP\_BOOLOR ::= 0x9b  } \\
+\texttt{OP\_NUMEQUAL ::= 0x9c  } \\
+\texttt{OP\_NUMEQUALVERIFY ::= 0x9d  } \\
+\texttt{OP\_NUMNOTEQUAL ::= 0x9e  } \\
+\texttt{OP\_LESSTHAN ::= 0x9f  } \\
+\texttt{OP\_GREATERTHAN ::= 0xa0  } \\
+\texttt{OP\_LESSTHANOREQUAL ::= 0xa1  } \\
+\texttt{OP\_GREATERTHANOREQUAL ::= 0xa2  } \\
+\texttt{OP\_MIN ::= 0xa3  } \\
+\texttt{OP\_MAX ::= 0xa4  } \\
+\texttt{OP\_WITHIN ::= 0xa5  } \\
+
+\textbf{\centering crypto} \\
+\texttt{OP\_RIPEMD160 ::= 0xa6  } \\
+\texttt{OP\_SHA1 ::= 0xa7  } \\
+\texttt{OP\_SHA256 ::= 0xa8  } \\
+\texttt{OP\_HASH160 ::= 0xa9  } \\
+\texttt{OP\_HASH256 ::= 0xaa  } \\
+\texttt{OP\_CODESEPARATOR ::= 0xab  } \\
+\texttt{OP\_CHECKSIG ::= 0xac  } \\
+\texttt{OP\_CHECKSIGVERIFY ::= 0xad  } \\
+\texttt{OP\_CHECKMULTISIG ::= 0xae  } \\
+\texttt{OP\_CHECKMULTISIGVERIFY ::= 0xaf  } \\
+
+\textbf{\centering expansion} \\
+\texttt{OP\_NOP1 ::= 0xb0  } \\
+\texttt{OP\_CHECKLOCKTIMEVERIFY ::= OP\_NOP2 ::= 0xb1  } \\
+\texttt{OP\_CHECKSEQUENCEVERIFY ::= OP\_NOP3 ::= 0xb2  } \\
+\texttt{OP\_NOP4 ::= 0xb3  } \\
+\texttt{OP\_NOP5 ::= 0xb4  } \\
+\texttt{OP\_NOP6 ::= 0xb5  } \\
+\texttt{OP\_NOP7 ::= 0xb6  } \\
+\texttt{OP\_NOP8 ::= 0xb7  } \\
+\texttt{OP\_NOP9 ::= 0xb8  } \\
+\texttt{OP\_NOP10 ::= 0xb9  } \\
+
+\textbf{\centering template matching params }\\
+\texttt{OP\_SMALLINTEGER ::= 0xfa  } \\
+\texttt{OP\_PUBKEYS ::= 0xfb  } \\
+\texttt{OP\_PUBKEYHASH ::= 0xfd  } \\
+\texttt{OP\_PUBKEY ::= 0xfe  } \\
+\texttt{OP\_INVALIDOPCODE ::= 0xff  } \\
+
+\end{multicols}
+
+\pagebreak[2]
+
+\hypertarget{OPSEM}{\section{Operational Semantics -- Big Step Semantics}}
+
+At any given point of a program's execution, the state is entirely described by the following elements:
+
+\begin{itemize}
+	\item The stack $S$, whose elements $S_i$ for $1 \leq i \leq |S|$ are indexed starting from the bottom;
+    \item The alt-stack $AS$, an auxiliary stack indexed in the same way;
+    \item The validity variable $V$, equal to \texttt{true} by default.
+\end{itemize}
+
+Any state in which $V = \texttt{false}$ causes the program to immediately terminate with a special exception, handled by the environment in which the program was being run.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Utility rules
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\hypertarget{OPGEN}{\subsection{Generic rules}}
+In order to more succinctly define the operational semantics of Script, we define generic rules not tied to any command in the language that express operations common in a stack-based language.
+
+% PUSH
+\subsubsection{PUSH}
+\inferrule
+{
+	|S| = L
+}
+{	
+	<\texttt{PUSH } B, \sigma> \Downarrow \sigma[|S| = L+1, S_{|S|} = B]
+}
+\vspace{3mm}
+
+% DROP
+\subsubsection{DROP}
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm} 
+    B \Downarrow n \hspace{3mm} 
+	L \geq n
+}
+{
+	<\texttt{DROP } B, \sigma> \Downarrow \sigma[S_i = S_{i+1} \hspace{3mm} \forall i. \hspace{1mm} n \leq i < L]
+}
+\vspace{3mm}
+
+% PUSH_ALT
+\subsubsection{PUSH\_ALT}
+\inferrule
+{|AS| = L}
+{<\texttt{PUSH\_ALT } B, \sigma> \Downarrow \sigma[|AS| = L+1, AS_{|AS|} = B]}
+\vspace{3mm}
+
+% DROP_ALT
+\subsubsection{DROP\_ALT}
+\inferrule
+{
+	\sigma(|AS|) = L \hspace{3mm} \sigma(|AS|) \geq B
+}
+{
+	<\texttt{DROP\_ALT } B, \sigma> \Downarrow \sigma[AS_i = AS_{i+1} \hspace{3mm} \forall i. \hspace{1mm} B \leq i < L]
+}
+\vspace{3mm}
+
+
+% TEST
+\subsubsection{TEST}
+\inferrule
+{	
+	\sigma(|S|) \geq x \hspace{3mm}
+	\sigma(S_x) \Downarrow t \hspace{3mm} 
+    t = 0
+}
+{
+	<\texttt{TEST $x$}, \sigma> \Downarrow FALSE
+}
+\vspace{3mm}
+
+\inferrule
+{	
+	\sigma(|S|) \geq x \hspace{3mm}
+	\sigma(S_x) \Downarrow t \hspace{3mm} 
+    t \neq 0
+}
+{
+	<\texttt{TEST $x$}, \sigma> \Downarrow TRUE
+}
+\vspace{3mm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Constants}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Constants: OP Code Definitions
+
+% OP_0, OP_FALSE
+\subsubsection{OP\_0, OP\_FALSE}
+Push the byte-vector representing 0 onto the stack. \\
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm} 
+    B \Downarrow 0
+}
+{
+	<\texttt{OP\_0}, \sigma> \Downarrow \sigma[|S|=L+1, S_{L+1}=B]
+}
+
+% OP_N
+\subsubsection{OP\_N, \textit{OP\_PUSHNBYTES}}
+Push the next $N$ bytes onto the stack. \\
+
+\inferrule
+{
+	\sigma(|S|) = L
+}
+{
+	<\texttt{OP\_N $b_1 \ldots b_N$}, \sigma> \Downarrow 
+	\sigma[|S|=L+1, S_{L+1}=<b_1 \ldots b_N>]
+}
+
+% OP_PUSHDATA1
+\subsubsection{OP\_PUSHDATA1}
+The next byte specifies how many bytes to push onto the stack as a byte-vector. \\
+
+\inferrule
+{
+    B_1 \Downarrow k \hspace{3mm} 
+	\sigma(|S|) = L \hspace{3mm} 
+}
+{
+	<\texttt{OP\_PUSHDATA1 $B_1^1$ $B_2^k$}, \sigma> \Downarrow 
+	\sigma[|S|=L+1, S_{L+1}=B_2]
+}
+
+%\vspace{3mm}
+%\inferrule
+%{
+%	x = |$B$| \hspace{3mm}
+%    b_1 \Downarrow k \hspace{3mm} 
+%    x < k 
+%}
+%{	
+%	<\texttt{OP\_PUSHDATA1 $b_1$ $B$ }, \sigma> \Downarrow 
+%	\sigma[V = false]
+%}
+
+% OP_PUSHDATA2
+\subsubsection{OP\_PUSHDATA2}
+The next two bytes specify how many bytes to push onto the stack as a byte-vector. \\
+
+\inferrule
+{
+    B_1 \Downarrow k \hspace{3mm} 
+	\sigma(|S|) = L \hspace{3mm} 
+}
+{
+	<\texttt{OP\_PUSHDATA2 $B_1^2$ $B_2^k$}, \sigma> \Downarrow 
+	\sigma[|S|=L+1, S_{L+1}=B_2]
+}
+
+%\vspace{3mm}
+%\inferrule
+%{
+%	x = |$B$| \hspace{3mm}
+%    (b_1 b_2) \Downarrow k \hspace{3mm} 
+%    x < k 
+%}
+%{	
+%	<\texttt{OP\_PUSHDATA2 $b_1$ $b_2$ $B$ }, \sigma> \Downarrow 
+%	\sigma[V = false]
+%}
+
+% OP_PUSHDATA4
+\subsubsection{OP\_PUSHDATA4}
+The next four bytes specify how many bytes to push onto the stack as a byte-vector. \\
+
+\inferrule
+{
+    B_1 \Downarrow k \hspace{3mm} 
+	\sigma(|S|) = L \hspace{3mm} 
+}
+{
+	<\texttt{OP\_PUSHDATA4 $B_1^4$ $B_2^k$}, \sigma> \Downarrow
+	\sigma[|S|=L+1, S_{L+1}=B_2]
+}
+
+%\vspace{3mm}
+%\inferrule
+%{
+%	x = |$B$| \hspace{3mm}
+%    (b_1 b_2 b_3 b_4) \Downarrow k \hspace{3mm} 
+%    x < k 
+%}
+%{	
+%	<\texttt{OP\_PUSHDATA4 $b_1$ $b_2$ $b_3$ $b_4$ $B$ }, \sigma> \Downarrow 
+%	\sigma[V = false]
+%}
+
+% OP_1NEGATE
+\subsubsection{OP\_1NEGATE}
+Push the byte-vector representing -1 onto the stack.\\
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm} 
+    B \Downarrow -1
+}
+{<\texttt{OP\_0}, \sigma> \Downarrow 
+	\sigma[|S|=l+1, S_{l+1}=B]}
+
+% OP_1, OP_TRUE
+\subsubsection{OP\_1, OP\_TRUE}
+Push the byte-vector representing 1 onto the stack. \\
+\inferrule
+{\sigma(|S|) = L \hspace{3mm} B \Downarrow 1}
+{<\texttt{OP\_0}, \sigma> \Downarrow 
+	\sigma[|S|=L+1, S_{L+1}=B]}
+
+% OP_2-OP_16
+\subsubsection{OP\_2-OP\_16, \textit{OP\_PUSHN}}
+Push the byte-vector representing the number specified in the word name onto the stack. \\
+
+\inferrule
+{\sigma(|S|) = L \hspace{3mm} B \Downarrow N}
+{<\texttt{OP\_PUSHN}, \sigma> \Downarrow 
+	\sigma[|S|=L+1, S_{L+1}=B]}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Flow Control}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Flow Control: OP Code Definitions
+
+% OP_NOP
+\subsubsection{OP\_NOP}
+Do nothing. \\
+
+\inferrule
+{\quad}
+{
+	<\texttt{OP\_NOP},\sigma> \Downarrow \sigma
+}
+
+% OP_IF, OP_ELSE, OP_ENDIF
+\subsubsection{OP\_IF, OP\_ELSE, OP\_ENDIF}
+Run $C_1$ if top of stack is present and evaluates to true. Otherwise run $C_2$ if stack is present and evaluates to false. \\
+
+\inferrule
+{	
+	\sigma(|S|)=L \hspace{3mm}
+	<\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
+	<\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <C_1, \sigma_1> \Downarrow \sigma '
+}
+{	
+	<\texttt{OP\_IF $C_1$ OP\_ENDIF}> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+\inferrule
+{	
+	\sigma(|S|)=L \hspace{3mm}
+	<\texttt{TEST $L$},\sigma> \Downarrow \texttt{FALSE} \hspace{3mm}
+	<\texttt{DROP $L$},\sigma> \Downarrow \sigma ' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_IF $C_1$ OP\_ENDIF}> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+\inferrule
+{	\sigma(|S|)=L \hspace{3mm}
+	<\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
+	<\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <C_1, \sigma_1> \Downarrow \sigma '
+}
+{	<\texttt{OP\_IF $C_1$ OP\_ELSE $C_2$ OP\_ENDIF}> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+\inferrule
+{	\sigma(|S|)=L \hspace{3mm}
+	<\texttt{TEST $L$},\sigma> \Downarrow \texttt{FALSE} \hspace{3mm}
+	<\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <C_2, \sigma_1> \Downarrow \sigma '
+}
+{	<\texttt{OP\_IF $C_1$ OP\_ELSE $C_2$ OP\_ENDIF}> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+% OP_NOTIF, OP_ELSE, OP_ENDIF
+\subsubsection{OP\_NOTIF, OP\_ELSE, OP\_ENDIF}
+Run $C_1$ if top of stack is present and evaluates to false. Otherwise run $C_2$ if stack is present and evaluates to true. \\
+
+\inferrule
+{	\sigma(|S|)=L \hspace{3mm}
+	<\texttt{TEST $L$},\sigma> \Downarrow \texttt{FALSE} \hspace{3mm}
+	<\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <C_1, \sigma_1> \Downarrow \sigma '
+}
+{	<\texttt{OP\_NOTIF $C_1$ OP\_ENDIF}> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+\inferrule
+{	\sigma(|S|)=L \hspace{3mm}
+	<\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
+	<\texttt{DROP $L$},\sigma> \Downarrow \sigma ' \hspace{3mm}
+}
+{	<\texttt{OP\_NOTIF $C_1$ OP\_ENDIF}> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+\inferrule
+{	\sigma(|S|)=L \hspace{3mm}
+	<\texttt{TEST $L$},\sigma> \Downarrow \texttt{FALSE} \hspace{3mm}
+	<\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <C_1, \sigma_1> \Downarrow \sigma '
+}
+{	<\texttt{OP\_NOTIF $C_1$ OP\_ELSE $C_2$ OP\_ENDIF}> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+\inferrule
+{	\sigma(|S|)=L \hspace{3mm}
+	<\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
+	<\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <C_2, \sigma_1> \Downarrow \sigma '
+}
+{	<\texttt{OP\_NOTIF $C_1$ OP\_ELSE $C_2$ OP\_ENDIF}> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+% OP_VERIFY
+\subsubsection{OP\_VERIFY := 0x69}
+If top of stack is present and evaluates to true then remove top of stock and mark transaction as valid; otherwise mark transaction as invalid. \\
+
+\inferrule
+{	\sigma(|S|)=L \hspace{3mm}
+	<\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
+	<\texttt{DROP $L$},\sigma> \Downarrow \sigma ' \hspace{3mm}
+    \sigma'(V)=\texttt{invalid}
+}
+{	<\texttt{OP\_VERIFY}, \sigma> \Downarrow \sigma '
+}
+
+% OP_RETURN
+\subsubsection{OP\_RETURN := 0x6a}
+Unconditionally mark transaction as invalid. \\
+
+\inferrule
+{	\quad
+}
+{	<\texttt{OP\_RETURN}, \sigma> \Downarrow \sigma[V=\texttt{invalid}]
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Stack}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% OP_TOALTSTACK
+\subsubsection{OP\_TOALTSTACK}
+
+\inferrule
+{	
+	|S| = L \hspace{3mm}
+    S_L = x \hspace{3mm}
+    <\texttt{DROP } L, \sigma> \Downarrow \sigma_1
+    <\texttt{PUSHALT } x, \sigma_1> \Downarrow \sigma'
+}
+{
+	<\texttt{OP\_TOALTSTACK}, \sigma > \Downarrow \sigma
+}
+\vspace{3mm}
+
+
+% OP_FROMALTSTACK
+\subsubsection{OP\_FROMALTSTACK}
+
+\inferrule
+{	
+	|AS| = L \hspace{3mm}
+    AS_L = x \hspace{3mm}
+    <\texttt{DROPALT } L, \sigma> \Downarrow \sigma_1
+    <\texttt{PUSH } x, \sigma_1> \Downarrow \sigma'
+}
+{
+	<\texttt{OP\_FROMALTSTACK}, \sigma > \Downarrow \sigma
+}
+\vspace{3mm}
+
+
+%  OP_IFDUP
+\subsubsection{OP\_IFDUP}
+If top of stack is present and non-zero, duplicate the top of the stack. \\
+
+\inferrule
+{
+	\sigma(S_{|S|}) = 0
+}
+{	
+	<\texttt{OP\_IFDUP}, \sigma > \Downarrow \sigma
+}
+\vspace{3mm}
+
+\inferrule
+{
+	\sigma(S_{|S|}) \neq 0 \hspace{3mm}
+    <\texttt{PUSH } S_{|S|} \Downarrow \sigma ' >
+} 
+{
+	<\texttt{OP\_IFDUP}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_DEPTH
+\subsubsection{OP\_DEPTH}
+Push the byte-vector representing the depth of the stack onto the stack. \\
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm} 
+    < \texttt{PUSH } L, \sigma > \Downarrow \sigma '
+}
+{
+	<\texttt{OP\_DEPTH}, \sigma > \Downarrow \sigma '
+}
+\vspace{3mm}
+
+% OP_DROP
+\subsubsection{OP\_DROP}
+Remove the top of the stack. \\
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm} 
+    L > 0 \hspace{3mm}
+    <\texttt{DROP } L, \sigma > \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_DROP}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_DUP
+\subsubsection{OP\_DUP}
+Duplicate the top of the stack. \\
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm} 
+    L > 0 \hspace{3mm}
+    <\texttt{PUSH }S_L, \sigma > \Downarrow \sigma'
+}
+{
+	<\texttt{OP\_DUP}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_NIP
+\subsubsection{OP\_NIP}
+Remove the byte-vector second from the top of the stack. \\ 
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm} 
+    L > 1 \hspace{3mm} 
+    <\texttt{DROP } L-1, \sigma > \Downarrow \sigma'
+}
+{
+	<\texttt{OP\_NIP}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_OVER
+\subsubsection{OP\_OVER}
+Copy the byte-vector second from the top onto the top of the stack. \\ 
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm} 
+    L > 1 \hspace{3mm} 
+    <\texttt{PUSH } S_{L-1}, \sigma > \Downarrow \sigma'
+}
+{
+	<\texttt{OP\_OVER}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_PICK
+\subsubsection{OP\_PICK}
+Copy the byte-vector $n$ from the top onto the top of the stack, not counting the top element $n$. \\
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) = n \hspace{3mm}
+    <\texttt{DROP } L, \sigma> \Downarrow \sigma_1 \hspace{3mm}  
+    <\texttt{PUSH } S_{L-n-1}, \sigma_1> \Downarrow \sigma'
+}
+{
+	<\texttt{OP\_PICK}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_ROLL
+\subsubsection{OP\_ROLL}
+Move the byte-vector $n$ from the top onto the top of the stack, not counting the top element $n$. \\
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) = n \hspace{3mm}
+    <\texttt{DROP } L, \sigma> \Downarrow \sigma_1 \hspace{3mm}  
+    <\texttt{PUSH } S_{L-n-1}, \sigma_1> \Downarrow \sigma_2
+    <\texttt{DROP } L-n-1, \sigma_2> \Downarrow \sigma'
+}
+{
+	<\texttt{OP\_ROLL}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_ROT
+\subsubsection{OP\_ROT}
+The top three items on the stack are rotated. Equivalently, move the byte-vector third from the top to the top of the stack. \\
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm}
+    <\texttt{PUSH } S_{L-2}, \sigma_1> \Downarrow \sigma_2
+    <\texttt{DROP } L-2, \sigma_2> \Downarrow \sigma'
+}
+{
+	<\texttt{OP\_ROT}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_SWAP
+\subsubsection{OP\_SWAP}
+The top two items on the stack are swapped. \\
+
+\inferrule
+{
+	\sigma{|S|} = L \hspace{3mm}
+    <\texttt{PUSH } S_{L-1}, \sigma_1> \Downarrow \sigma_2
+    <\texttt{DROP } {L-1}, \sigma_2> \Downarrow \sigma'
+}
+{<\texttt{OP\_SWAP}, \sigma > \Downarrow \sigma'}
+\vspace{3mm}
+
+% OP_TUCK
+\subsubsection{OP\_TUCK}
+The item at the top of the stack is copied and inserted before the second-to-top item. \\
+
+\inferrule
+{	
+	\sigma(S_{|S|}) = x \hspace{3mm} 
+	\sigma(S_{|S|-1}) = y \hspace{3mm} 
+	<\texttt{DROP } |S|, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{DROP } |S|, \sigma_1> \Downarrow \sigma_2 \hspace{3mm} \\
+    <\texttt{PUSH } x, \sigma_2> \Downarrow \sigma_3 \hspace{3mm}
+	<\texttt{PUSH } y, \sigma_3> \Downarrow \sigma_4 \hspace{3mm} 
+    <\texttt{PUSH } x, \sigma_4> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_TUCK}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_2DROP
+\subsubsection{OP\_2DROP}
+Removes the top two stack items. \\
+
+\inferrule
+{	
+	<\texttt{DROP } |S|, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{DROP } |S|, \sigma_1> \Downarrow \sigma' \hspace{3mm} \\
+}
+{	
+	<\texttt{OP\_2DROP}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_2DUP
+\subsubsection{OP\_2DUP}
+Duplicates the top two stack items. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+	<\texttt{PUSH } S_{L-1}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{PUSH } S_L, \sigma_1> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_2DUP}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_3DUP
+\subsubsection{OP\_3DUP}
+Duplicates the top three stack items. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+	<\texttt{PUSH } S_{L-2}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{PUSH } S_{L-1}, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
+    <\texttt{PUSH } S_L, \sigma_2> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_3DUP}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_2OVER
+\subsubsection{OP\_2OVER}
+Copies the pair of items two spaces back in the stack to the front. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+	<\texttt{PUSH } S_{L-3}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{PUSH } S_{L-2}, \sigma_1> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_2OVER}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_2ROT
+\subsubsection{OP\_2ROT}
+The fifth and sixth items back are moved to the top of the stack. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    <\texttt{PUSH } S_{L-5}, \sigma_2> \Downarrow \sigma_3 \hspace{3mm}
+    <\texttt{PUSH } S_{L-4}, \sigma_3> \Downarrow \sigma' \hspace{3mm}
+    <\texttt{DROP } L-5, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L-4, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
+}
+{	
+	<\texttt{OP\_2ROT}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_2SWAP
+\subsubsection{OP\_2SWAP}
+The first and second items are swapped. The third and fourth items are swapped. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_{L}) = x \hspace{3mm}
+    \sigma(S_{L-1}) = y \hspace{3mm}
+	<\texttt{DROP } L, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L-1, \sigma_1> \Downarrow \sigma_2 \hspace{3mm} \\
+    <\texttt{PUSH } S_{L-3}, \sigma_2> \Downarrow \sigma_3 \hspace{3mm}
+    <\texttt{DROP } L-3, \sigma_3> \Downarrow \sigma_4 \hspace{3mm}
+    <\texttt{PUSH } y, \sigma_4> \Downarrow \sigma_5 \hspace{3mm}
+    <\texttt{PUSH } x, \sigma_5> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_2SWAP}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Splice}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%OP_CAT
+\subsubsection{OP\_CAT}
+\textcolor{red}{\textit{Disabled}}\\
+Concatenates two byte strings. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    <\texttt{PUSH } S_{L} S_{L-1}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
+    <\texttt{DROP } L-1, \sigma_2> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_CAT}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+%OP_SUBSTR
+\subsubsection{OP\_SUBSTR}
+\textcolor{red}{\textit{Disabled}}\\
+Returns a subtring of the top element, starting from index given by second element, of size given by third element. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) = b_1 \ldots b_k \hspace{3mm}
+    \sigma(S_{L-1}) = start \hspace{3mm}
+    \sigma(S_{L-2}) = size \hspace{3mm}
+    start < k \hspace{3mm}
+    start + size < k \hspace{3mm} \\
+    <\texttt{PUSH } b_{start} \ldots b_{start+size}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
+    <\texttt{DROP } L-1, \sigma_2> \Downarrow \sigma_3 \hspace{3mm}
+    <\texttt{DROP } L-2, \sigma_3> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_SUBSTR}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+%OP_LEFT
+\subsubsection{OP\_LEFT}
+\textcolor{red}{\textit{Disabled}}\\
+Returns only character left of a specified point in top element, index given by second element. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) = b_1 \ldots b_k \hspace{3mm}
+    \sigma(S_{L-1}) = idx \hspace{3mm}
+    idx \leq k \hspace{3mm} \\
+    <\texttt{PUSH } b_1 b_{idx-1}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
+    <\texttt{DROP } L-1, \sigma_2> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_LEFT}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+%OP_RIGHT
+\subsubsection{OP\_RIGHT}
+\textcolor{red}{\textit{Disabled}}\\
+Returns only character right of a specified point in top element, index given by second element. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) = b_1 \ldots b_k \hspace{3mm}
+    \sigma(S_{L-1}) = idx \hspace{3mm}
+    idx \leq k \\
+    <\texttt{PUSH } b_{idx} \ldots b_k, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
+    <\texttt{DROP } L-1, \sigma_2> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_RIGHT}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+\subsubsection{OP\_SIZE}
+Pushes the number of bytes of the top element of the stack. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) = B \hspace{3mm}
+    <\texttt{PUSH } |B|, \sigma> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_SIZE}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Bitwise Logic}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% OP_INVERT
+\subsubsection{OP\_INVERT}
+\textcolor{red}{\textit{Disabled}}\\
+Flips all bits of the top stack element. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) = b_1 \ldots b_k \hspace{3mm}
+    <\texttt{PUSH } \lnot b_1 \lnot b_2 \ldots \lnot b_k, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L, \sigma_1> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_EQUAL}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_AND
+\subsubsection{OP\_AND}
+\textcolor{red}{\textit{Disabled}}\\
+Boolean \textit{and} between bits of first and second stack elements. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) = B_1 \hspace{3mm}
+    \sigma(S_{L-1}) = B_2 \hspace{3mm} \\
+    <\texttt{PUSH } B_1 \mathrel{\&} B_2, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
+    <\texttt{DROP } L-1, \sigma_2> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_AND}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_OR
+\subsubsection{OP\_OR}
+\textcolor{red}{\textit{Disabled}}\\
+Boolean \textit{and} between bits of first and second stack elements. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) = B_1 \hspace{3mm}
+    \sigma(S_{L-1}) = B_2 \hspace{3mm} \\
+    <\texttt{PUSH } B_1 \mathrel{|} B_2, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
+    <\texttt{DROP } L-1, \sigma_2> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_OR}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_XOR
+\subsubsection{OP\_XOR}
+\textcolor{red}{\textit{Disabled}}\\
+Boolean \textit{and} between bits of first and second stack elements. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) = B_1 \hspace{3mm}
+    \sigma(S_{L-1}) = B_2 \hspace{3mm} \\
+    <\texttt{PUSH } B_1 \hspace{1mm} ^\wedge \hspace{1mm} B_2, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
+    <\texttt{DROP } L-1, \sigma_2> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_XOR}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_EQUAL
+\subsubsection{OP\_EQUAL}
+Returns 1 if the two top elements are equal, 0 otherwise. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) = B_1 \hspace{3mm}
+    \sigma(S_{L-1}) = B_2 \hspace{3mm}
+    B_1 = B_2 \hspace{3mm}
+    <\texttt{PUSH } 1, \sigma> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_EQUAL}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) = B_1 \hspace{3mm}
+    \sigma(S_{L-1}) = B_2 \hspace{3mm}
+    B_1 \neq B_2 \hspace{3mm}
+    <\texttt{PUSH } 0, \sigma> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_EQUAL}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_EQUALVERIFY
+\subsubsection{OP\_EQUALVERIFY}
+Description. \\
+
+\inferrule
+{	
+	<\texttt{OP\_EQUAL }, \sigma> \Downarrow \sigma_1
+    <\texttt{OP\_VERIFY }, \sigma_1> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_EQUALVERIFY}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Arithmetic}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% OP_1ADD
+\subsubsection{OP\_1ADD}
+Add 1 to the top of the stack. \\
+
+\inferrule
+{	
+	\sigma(|S|) = l \hspace{3mm}
+    \sigma(S_l) \Downarrow x \hspace{3mm}
+    B \Downarrow x+1 \hspace{3mm}
+	<\texttt{DROP } l, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{PUSH } B, \sigma_1> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_2SWAP}, \sigma > \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_1SUB
+\subsubsection{OP\_1SUB}
+Subtract 1 from the top of the stack. \\
+
+\inferrule
+{	
+	\sigma(|S|) = l \hspace{3mm}
+    \sigma(S_l) \Downarrow x \hspace{3mm}
+    B \Downarrow x-1 \hspace{3mm}
+	<\texttt{DROP } l, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{PUSH } B, \sigma_1> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_1SUB}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_ABS
+\subsubsection{OP\_ABS}
+The top of the stack is replaced with the byte-vector representing it's absolute value. \\
+
+\inferrule
+{	
+	\sigma(|S|) = l \hspace{3mm}
+    \sigma(S_l) \Downarrow x \hspace{3mm}
+    B \Downarrow |x| \hspace{3mm}
+	<\texttt{DROP } l, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{PUSH } B, \sigma_1> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_1SUB}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_NEGATE
+\subsubsection{OP\_NEGATE}
+The top of the stack is negated. \\
+
+\inferrule
+{	
+	\sigma(|S|) = l \hspace{3mm}
+    \sigma(S_l) \Downarrow x \hspace{3mm}
+    B \Downarrow -x \hspace{3mm}
+	<\texttt{DROP } l, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{PUSH } B, \sigma_1> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_1SUB}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_NOT
+\subsubsection{OP\_NOT}
+If the top of the stack is 0, replace it with the byte vector representing 1. Otherwise, replace it with the byte-vector representing 0. \\
+
+\inferrule
+{	
+    <\texttt{OP\_IF PUSH OP\_0 OP\_ELSE PUSH OP\_1 OP\_ENDIF}, \sigma> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_NOT}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_0NOTEQUAL
+\subsubsection{OP\_0NOTEQUAL}
+Push the byte-vector representing 0 onto the stack if the top of stack is 0. Otherwise replace the top of stack with the byte-vector representing 1. \\
+
+\inferrule
+{	
+    <\texttt{OP\_IF PUSH OP\_1 OP\_ELSE PUSH OP\_0 OP\_ENDIF}, \sigma> \Downarrow \sigma'
+}
+{	
+	<\texttt{OP\_0NOTEQUAL}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_ADD
+\subsubsection{OP\_ADD}
+Let the inputs be the top two items of the stack, $a$ and $b$. Push the byte-vector representing $a+b$ onto the stack. \\
+
+\inferrule
+{	
+	\sigma(|S|) = l \hspace{3mm}
+    \sigma(S_l) \Downarrow x \hspace{3mm}
+    \sigma(S_{l-1}) \Downarrow y \hspace{3mm}
+    B \Downarrow x+y \hspace{3mm}
+    <\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{PUSH B}, \sigma_1> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_ADD}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_SUB
+\subsubsection{OP\_SUB}
+Let the inputs be the top two items of the stack, $a$ and $b$. Push the byte-vector representing $a-b$ onto the stack. \\
+
+\inferrule
+{	
+	\sigma(|S|) = l \hspace{3mm}
+    \sigma(S_l) \Downarrow x \hspace{3mm}
+    \sigma(S_{l-1}) \Downarrow y \hspace{3mm}
+    B \Downarrow y-x \hspace{3mm}
+    <\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{PUSH B}, \sigma_1> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_SUB}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_BOOLAND
+\subsubsection{OP\_BOOLAND}
+Let the inputs be the top two items of the stack, $a$ and $b$. If both $a$ and $b$ are not 0, then push 1 onto the stack. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) \Downarrow a \hspace{3mm}
+    \sigma(S_{L-1}) \Downarrow b \hspace{3mm}
+    a \neq 0 \land b \neq 0 \hspace{3mm}
+    <\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{PUSH OP\_1}, \sigma_1> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_BOOLAND}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) \Downarrow a \hspace{3mm}
+    \sigma(S_{L-1}) \Downarrow b \hspace{3mm}
+    a = 0 \lor b = 0 \hspace{3mm}
+    <\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{PUSH OP\_0}, \sigma> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_BOOLAND}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_BOOLOR
+\subsubsection{OP\_BOOLOR}
+Let the inputs be the top two items of the stack, $a$ and $b$. If either $a$ or $b$ are not 0, then push 1 onto the stack. \\
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) \Downarrow a \hspace{3mm}
+    \sigma(S_{L-1}) \Downarrow b \hspace{3mm}
+    a \neq 0 \lor b \neq 0 \hspace{3mm}
+    <\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{OP\_1}, \sigma_1> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_BOOLOR}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+\inferrule
+{	
+	\sigma(|S|) = L \hspace{3mm}
+    \sigma(S_L) \Downarrow a \hspace{3mm}
+    \sigma(S_{L-1}) \Downarrow b \hspace{3mm}
+    a \neq 0 \land b \neq 0 \hspace{3mm}
+    <\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{OP\_0}, \sigma_1> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_BOOLOR}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_NUMEQUAL
+\subsubsection{OP\_NUMEQUAL}
+Let the inputs be the top two items of the stack, $a$ and $b$. Push 1 onto the stack if $a = b$; push 0 onto the stack otherwise. \\
+
+\inferrule
+{	
+    <\texttt{OP\_SUB}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{OP\_IF PUSH OP\_0 OP\_ELSE PUSH OP\_1}, \sigma_1> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_NUMEQUAL}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_NUMEQUALVERIFY
+\subsubsection{OP\_NUMEQUALVERIFY}
+Let the inputs be the top two items of the stack, $a$ and $b$. Push 1 onto the stack if $a = b$; push 0 onto the stack otherwise. If 0 is pushed onto the stack, mark the transaction as invalid. \\
+
+\inferrule
+{	
+    <\texttt{OP\_NUMEQUAL}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{OP\_VERIFY}, \sigma_1> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_NUMEQUALVERIFY}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_NUMNOTEQUAL
+\subsubsection{OP\_NUMNOTEQUAL}
+Let the inputs be the top two items of the stack, $a$ and $b$. Push 1 if the numbers are equal, 0 otherwise. \\
+
+\inferrule
+{	
+    <\texttt{OP\_SUB}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{OP\_IF PUSH OP\_1 OP\_ELSE PUSH OP\_0}, \sigma_1> \Downarrow \sigma' \hspace{3mm}
+}
+{	
+	<\texttt{OP\_NUMNOTEQUAL}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+
+% OP_LESSTHAN
+\subsubsection{OP\_LESSTHAN}
+Let the inputs be the element on the top of the stack(b) and the element second to the top (a).  Push 1 onto the stack if a is less than b, otherwise push 0. \\
+
+\inferrule
+{	\sigma(|S|) = L \hspace{3mm}
+	\sigma(S_{L-1}) \Downarrow a \hspace{3mm}
+	\sigma(S_L) \Downarrow b \hspace{3mm}
+	a \geq b \hspace{3mm}
+	<\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{OP\_0}, \sigma_1> \Downarrow \sigma ' \hspace{3mm}
+}
+{	<\texttt{OP\_LESSTHAN}, \sigma> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+\inferrule
+{	\sigma(|S|) = L \hspace{3mm}
+	\sigma(S_{L-1}) \Downarrow a \hspace{3mm}
+	\sigma(S_L) \Downarrow b \hspace{3mm}
+	a < b \hspace{3mm}
+	<\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{OP\_1}, \sigma_1> \Downarrow \sigma ' \hspace{3mm}
+}
+{	<\texttt{OP\_LESSTHAN}, \sigma> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+% OP_GREATERTHAN
+\subsubsection{OP\_GREATERTHAN}
+Let the inputs be the element on the top of the stack(b) and the element second to the top (a).  Push 1 onto the stack if a is greater than b, otherwise push 0. \\
+
+\inferrule
+{	\sigma(|S|) = L \hspace{3mm}
+	\sigma(S_{L-1}) \Downarrow a \hspace{3mm}
+	\sigma(S_L) \Downarrow b \hspace{3mm}
+	a \leq b \hspace{3mm}
+	<\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{OP\_0}, \sigma_1> \Downarrow \sigma ' \hspace{3mm}
+}
+{	<\texttt{OP\_GREATERTHAN}, \sigma> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+\inferrule
+{	\sigma(|S|) = L \hspace{3mm}
+	\sigma(S_{L-1}) \Downarrow a \hspace{3mm}
+	\sigma(S_L) \Downarrow b \hspace{3mm}
+	a > b \hspace{3mm}
+	<\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{OP\_1}, \sigma_1> \Downarrow \sigma ' \hspace{3mm}
+}
+{	<\texttt{OP\_GREATERTHAN}, \sigma> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+% OP_LESSTHANOREQUAL
+\subsubsection{OP\_LESSTHANOREQUAL}
+Let the inputs be the element on the top of the stack(b) and the element second to the top (a).  Push 1 onto the stack if a is less than or equal to b, otherwise push 0. \\
+
+\inferrule
+{	\sigma(|S|) = L \hspace{3mm}
+	\sigma(S_{L-1}) \Downarrow a \hspace{3mm}
+	\sigma(S_L) \Downarrow b \hspace{3mm}
+	a > b \hspace{3mm}
+	<\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{OP\_0}, \sigma_1> \Downarrow \sigma ' \hspace{3mm}
+}
+{	<\texttt{OP\_LESSTHANOREQUAL}, \sigma> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+\inferrule
+{	\sigma(|S|) = L \hspace{3mm}
+	\sigma(S_{L-1}) \Downarrow a \hspace{3mm}
+	\sigma(S_L) \Downarrow b \hspace{3mm}
+	a \leq b \hspace{3mm}
+	<\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{OP\_1}, \sigma_1> \Downarrow \sigma ' \hspace{3mm}
+}
+{	<\texttt{OP\_LESSTHANOREQUAL}, \sigma> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+% OP_GREATERTHANOREQUAL
+\subsubsection{OP\_GREATERTHANOREQUAL}
+Let the inputs be the element on the top of the stack(b) and the element second to the top (a).  Push 1 onto the stack if a is greater than or equal to b, otherwise push 0. \\
+
+\inferrule
+{	\sigma(|S|) = L \hspace{3mm}
+	\sigma(S_{L-1}) \Downarrow a \hspace{3mm}
+	\sigma(S_L) \Downarrow b \hspace{3mm}
+	a < b \hspace{3mm}
+	<\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{OP\_0}, \sigma_1> \Downarrow \sigma ' \hspace{3mm}
+}
+{	<\texttt{OP\_GREATERTHANOREQUAL}, \sigma> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+\inferrule
+{	\sigma(|S|) = L \hspace{3mm}
+	\sigma(S_{L-1}) \Downarrow a \hspace{3mm}
+	\sigma(S_L) \Downarrow b \hspace{3mm}
+	a \geq b \hspace{3mm}
+	<\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{OP\_1}, \sigma_1> \Downarrow \sigma ' \hspace{3mm}
+}
+{	<\texttt{OP\_GREATERTHANOREQUAL}, \sigma> \Downarrow \sigma '
+}
+\vspace{3mm}
+
+% OP_MIN
+\subsubsection{OP\_MIN}
+the larger of the two elements at the top of the stack is removed. \\
+
+\inferrule
+{
+    \sigma(|S|) = L \hspace{3mm})
+    \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
+    \sigma(S_{L}) \Downarrow b \hspace{3mm}
+    a \leq b \hspace{3mm}
+    <\texttt{DROP }L, \sigma> \Downarrow \sigma' \hspace{3mm}
+}
+{
+    <\texttt{OP\_MIN}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+\inferrule
+{
+    \sigma(|S|) = L \hspace{3mm}
+    \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
+    \sigma(S_{L}) \Downarrow b \hspace{3mm}
+    b < a \hspace{3mm}
+    <\texttt{DROP } L-1, \sigma> \Downarrow \sigma' \hspace{3mm}
+}
+{
+    <\texttt{OP\_MIN}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_MAX
+\subsubsection{OP\_MAX}
+the smaller of the two elements on the top of the stack is removed. \\
+
+\inferrule
+{
+    \sigma(|S|) = L \hspace{3mm}
+    \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
+    \sigma(S_{L}) \Downarrow b \hspace{3mm}
+    a \geq b \hspace{3mm}
+    <\texttt{DROP }L, \sigma> \Downarrow \sigma' \hspace{3mm}
+}
+{
+    <\texttt{OP\_MAX}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+\inferrule
+{
+    \sigma(|S|) = L \hspace{3mm}
+    \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
+    \sigma(S_{L}) \Downarrow b \hspace{3mm}
+    b > a \hspace{3mm}
+    <\texttt{DROP } L-1, \sigma> \Downarrow \sigma' \hspace{3mm}
+}
+{
+    <\texttt{OP\_MAX}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+% OP_WITHIN
+\subsubsection{OP\_WITHIN}
+the input is the 3 elements at the top of the stack x, min, max where max is the top of the stack.  push 1 if x is greater than or equal to min and less than max, otherwise push 0. \\
+
+\inferrule
+{
+    \sigma(|S|) = L \hspace{3mm}
+    \sigma(S_{L}) \Downarrow max \hspace{3mm}
+    \sigma(S_{L-1}) \Downarrow min \hspace{3mm}
+    \sigma(S_{L-2}) \Downarrow x \hspace{3mm}
+    min \leq x < max \hspace{3mm}
+    <\texttt{OP\_1}, \sigma> \Downarrow \sigma' \hspace{3mm}
+}
+{
+    <\texttt{OP\_WITHIN}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+\inferrule
+{
+    \sigma(|S|) = L \hspace{3mm}
+    \sigma(S_{L}) \Downarrow max \hspace{3mm}
+    \sigma(S_{L-1}) \Downarrow min \hspace{3mm}
+    \sigma(S_{L-2}) \Downarrow x \hspace{3mm}
+    \lnot (min \leq x < max) \hspace{3mm}
+    <\texttt{OP\_1}, \sigma> \Downarrow \sigma' \hspace{3mm}
+}
+{
+    <\texttt{OP\_WITHIN}, \sigma> \Downarrow \sigma'
+}
+\vspace{3mm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Crypto}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsubsection{OP\_RIPEMD160}
+The element at the top of the stack is hashed with RIPEMD-160. \\
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm}
+    B = \textsc{RIPEMD-160}(\sigma(S_L)) \hspace{3mm}
+    <\texttt{DROP }L, \sigma> \Downarrow sigma_1 \hspace{3mm}
+    <\texttt{PUSH }B, \sigma_1> \Downarrow sigma' \hspace{3mm}
+}
+{
+	<\texttt{OP\_RIPEMD-160}, \sigma> \Downarrow sigma'
+}
+\vspace{3mm}
+
+\subsubsection{OP\_SHA1}
+The element at the top of the stack is hashed with SHA-1. \\
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm}
+    B = \textsc{SHA-1}(\sigma(S_L)) \hspace{3mm}
+    <\texttt{DROP }L, \sigma> \Downarrow sigma_1 \hspace{3mm}
+    <\texttt{PUSH }B, \sigma_1> \Downarrow sigma' \hspace{3mm}
+}
+{
+	<\texttt{OP\_SHA1}, \sigma> \Downarrow sigma'
+}
+\vspace{3mm}
+\subsubsection{OP\_SHA256}
+The element at the top of the stack is hashed with SHA-256. \\
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm}
+    B = \textsc{SHA-256}(\sigma(S_L)) \hspace{3mm}
+    <\texttt{DROP }L, \sigma> \Downarrow sigma_1 \hspace{3mm}
+    <\texttt{PUSH }B, \sigma_1> \Downarrow sigma' \hspace{3mm}
+}
+{
+	<\texttt{OP\_SHA-256}, \sigma> \Downarrow sigma'
+}
+\vspace{3mm}
+\subsubsection{OP\_HASH160}
+The element at the top of the stack is hashed with SHA-256 and then with RIPEMD-160. \\
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm}
+    B = \textsc{RIPEMD-160}(\textsc{SHA-256}(\sigma(S_L))) \hspace{3mm}
+    <\texttt{DROP }L, \sigma> \Downarrow sigma_1 \hspace{3mm}
+    <\texttt{PUSH }B, \sigma_1> \Downarrow sigma' \hspace{3mm}
+}
+{
+	<\texttt{OP\_HASH160}, \sigma> \Downarrow sigma'
+}
+\vspace{3mm}
+
+\subsubsection{OP\_HASH256}
+The element at the top of the stack is hashed twice with SHA-256. \\
+
+\inferrule
+{
+	\sigma(|S|) = L \hspace{3mm}
+    B = \textsc{SHA-256}(\textsc{SHA-256}(\sigma(S_L))) \hspace{3mm}
+    <\texttt{DROP }L, \sigma> \Downarrow sigma_1 \hspace{3mm}
+    <\texttt{PUSH }B, \sigma_1> \Downarrow sigma' \hspace{3mm}
+}
+{
+	<\texttt{OP\_HASH256}, \sigma> \Downarrow sigma'
+}
+\vspace{3mm}
+
+\subsubsection{OP\_CODESEPARATOR}
+\subsubsection{OP\_CHECKSIG}
+\subsubsection{OP\_CHECKSIGVERIFY}
+\subsubsection{OP\_CHECKMULTISIG}
+\subsubsection{OP\_CHECKMULTISIGVERIFY}
+\subsection{Locktime}
+\subsubsection{OP\_CHECKLOCKTIMEVERIFY (previously OP\_NOP2)}
+\subsubsection{OP\_CHECKSEQUENCEVERIFY (previously OP\_NOP3)}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Disabled / Reserved / Invalid}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+All disabled, reserved or otherwise invalid opcodes transition to an invalid state.
+
+\inferrule
+{\quad}
+{<\texttt{dcom},\sigma> \Downarrow \sigma[V=invalid]}
+
+
+\section{Operational Semantics -- Small Step Semantics}
+ 
+\subsection{Local reduction rules}
+
+[Have to explain what are atomic commands, and why we're defining them.]
+
+[No need to add PUSHDATA commands: these can be described as atomic commands, if we remember that the PUSHDATA opcode is only part of the push commands defined in the syntax - Hugo]
+
+\begin{align*}
+&<\texttt{OP\_NOP com}, \sigma> 
+	\hspace{3mm}
+\longrightarrow 
+	\hspace{3mm}
+<\texttt{com}, \sigma>
+\\
+&<\texttt{atom\_com}, \sigma[S=s, V=v]> 
+	\hspace{3mm}
+\longrightarrow 
+	\hspace{3mm}
+<\texttt{OP\_NOP}, \sigma[S=s', V=v']>
+\\
+&<\texttt{OP\_IF com OP\_ENDIF}, \sigma[S_{|S|} \neq 0]> 
+	\hspace{3mm}
+\longrightarrow 
+	\hspace{3mm}
+<\texttt{com}, \sigma> 
+\\
+&<\texttt{OP\_IF com OP\_ENDIF}, \sigma[S_{|S|} = 0]> 
+	\hspace{3mm}
+\longrightarrow 
+	\hspace{3mm}
+<\texttt{OP\_NOP}, \sigma> 
+\\
+&<\texttt{OP\_NOTIF com OP\_ENDIF}, \sigma[S_{|S|} \neq 0]> 
+	\hspace{3mm}
+\longrightarrow 
+	\hspace{3mm}
+<\texttt{OP\_NOP}, \sigma> 
+\\
+&<\texttt{OP\_NOTIF com OP\_ENDIF}, \sigma[S_{|S|} = 0]> 
+	\hspace{3mm}
+\longrightarrow 
+	\hspace{3mm}
+<\texttt{com}, \sigma> 
+\\
+&<\texttt{OP\_IF com$_1$ OP\_ELSE com$_2$ OP\_ENDIF}, \sigma[S_{|S|} \neq 0]> 
+	\hspace{3mm}
+\longrightarrow 
+	\hspace{3mm}
+<\texttt{com$_1$}, \sigma> 
+\\
+&<\texttt{OP\_IF com$_1$ OP\_ELSE com$_2$ OP\_ENDIF}, \sigma[S_{|S|} = 0]> 
+	\hspace{3mm}
+\longrightarrow 
+	\hspace{3mm}
+<\texttt{com$_2$}, \sigma> 
+\\
+&<\texttt{OP\_NOTIF com$_1$ OP\_ELSE com$_2$ OP\_ENDIF}, \sigma[S_{|S|} \neq 0]> 
+	\hspace{3mm}
+\longrightarrow 
+	\hspace{3mm}
+<\texttt{com$_2$}, \sigma> 
+\\
+&<\texttt{OP\_NOTIF com$_1$ OP\_ELSE com$_2$ OP\_ENDIF}, \sigma[S_{|S|} = 0]> 
+	\hspace{3mm}
+\longrightarrow 
+	\hspace{3mm}
+<\texttt{com$_1$}, \sigma> 
+\\
+\end{align*}
+
+\subsection{Global reduction rules}
+
+Since programs in Script are evaluated strictly from left to right, there is really only global reduction rule aside from $\bullet$.
+
+$$H ::= \bullet \mid H \hspace{1mm} \texttt{com}$$
+
+\end{document}

@@ -1,9 +1,10 @@
 # 
+nohup\.out
 *.pdf
+*.log
 *.aux
 *.fdb_latexmk
 *.fls
-*.log
-postfix.pdf
-*.synctex.gz
+*.gz
+*.sw[o-z]
 *.out
