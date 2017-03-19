@@ -125,7 +125,11 @@ Here we prove that some commands are redundant. Must exaplin why this can be des
 
 \textcolor{blue}{COMPLETELY REVISE THIS}
 
-The best documentation for Script exists on the Bitcoin wiki [2].  This documentation is written in plain English, and not in a logical formalism that allows mathematical reasoning. To our knowledge, no previous effort has been made to provide a formal specification of Script. If we turn to Forth to find something related, we can find standard specifications like the Forth-83 standard (http://forth.sourceforge.net/standard/fst83/fst83-12.htm). However even these specifications are also given in plain English.
+To our knowledge, there has been no previous effort to provide a formal specification of the Script language.  As a result, the existing documentation works as a rough guideline for our work but is not complete.  Explanations of how Script works are located on the bitcoin wiki [2] and the reference implementation [1].  
+
+The bitcoin wiki is an explanation of how each opcode works in plain english. The explanations are not rigorous, and are not in a logical formalism that allows mathematical reasoning.  There are many situations where descriptions are vague and can be interpreted in more than one way.  For example, the explanation of OP\_LEFT takes an argument to index a string and throws away everything to the right of the index, but it doesnt tell us if that operation is right-inclusive.  
+
+The reference implementation is much more thorough that the wiki but, being c++ code, it is much harder to interpret and is not in a format that allows for logical reasoning.  If we turn to Forth to find something related, we can find standard specifications like the Forth-83 standard (http://forth.sourceforge.net/standard/fst83/fst83-12.htm). However even these specifications are given in plain English.
 
 
 \section{CONCLUSIONS}
