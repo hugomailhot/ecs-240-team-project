@@ -61,13 +61,9 @@ Script is what Bitcoin uses to encode transactions over the network. It is purpo
 
 As a postfix language written in sequences of bytes, Script is not an easy language to pick up and understand. It is even harder to assess the effect that proposed modifications to the language might have on the guarantees that it must provide. In the past, Script has been progressively restricted in response to discovered vulnerabilities in the language. The restrictions eliminated the vulnerabilities, at the cost of reducing the expressiveness of the language. It is not clear that all of the restrictions added were necessary to produce the desired end of securing the language. A formal description and eventually specification would help in such determinations, allowing more objective and precise decisions.
 
-As Bitcoin's economic presence grows, formal specifications, abstracted away from current current implementations of the Bitcoin protocol, will become increasingly essential in mediating conflict over what Bitcoin is or should be, allowing participants in the Bitcoin community to reason formally and precisely about their opinions and proposals.
+To prevent attacks on the Bitcoin network based on exploiting a flaw in Script, the Bitcoin community agreed on a set of ``standard'' script templates that nodes will process. These limitations, however, are deemed temporary and subject to change in the future [3], although no consensus exists at the moment on what should replace these limitations, if anything. As Bitcoin's economic presence grows, formal specifications, abstracted away from current implementations of the Bitcoin protocol, will become increasingly essential in mediating conflict over what Bitcoin is or should be, allowing participants in the Bitcoin community to reason formally and precisely about their opinions and proposals.
 
-\textcolor{blue}{[Describe history of Script and Bitcoin maybe, say the language was flawed]}
-
-\textcolor{blue}{[Mention [3] when it says that "These limitations are encoded in a function called isStandard(), which defines five types of "standard" transactions. These limitations are temporary and might be lifted by the time you read this."
-The transaction programs being subject to change justifies allowing formal reasoning about the language.]}
-
+\textcolor{blue}{[anything else? can we add more examples of how a lack of formal specification was problematic?]}
 
 
 \section{APPROACH}
