@@ -136,11 +136,6 @@ $$<\texttt{OP\_RETURN com}, \sigma> \hspace{1mm} \longrightarrow \hspace{1mm} <\
 thus ensuring that its evaluation in a script invariably resulted in a rejected transaction.
 As no other command in the language can cause early termination of the program with a valid state, we can now say that there exists no skeleton key script that could serve to unlock any arbitrary locking script.
 
-
-\subsection{The Script command set could be reduced without loss of expressiveness}
-Here we prove that some commands are redundant. Must explain why this can be desirable sometimes, but also why some of them are clearly uselessly redundant.
-
-
 \section{RELATED WORK}
 
 To our knowledge, there has been no previous effort to provide a formal specification of the Script language. As a result, the existing documentation works as a rough guideline for our work but is not complete. Explanations of how Script works are located on the Bitcoin wiki [2] and the reference implementation [1].  
