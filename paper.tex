@@ -55,8 +55,6 @@ Bitcoin transactions are validated using a specialized language called Script. D
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{INTRODUCTION}
 
-\textcolor{red}{\textit{To describe and motivate the problem or your survey topic }}\\
-
 Script is what Bitcoin uses to encode transactions over the network. It is purposefully restricted, and most notably lacks a mechanism for looping and guarantees termination. To properly learn the language and understand its semantics, one must read through the catalog of \textit{opcodes} (hex values used as operators) and analyze its C++ reference implementation.
 
 As a postfix language written in sequences of bytes, Script is not an easy language to pick up and understand. It is even harder to assess the effect that proposed modifications to the language might have on the guarantees that it must provide. In the past, Script has been progressively restricted in response to discovered vulnerabilities in the language. The restrictions eliminated the vulnerabilities, at the cost of reducing the expressiveness of the language. It is not clear that all of the restrictions added were necessary to produce the desired end of securing the language. A formal description and eventually specification would help in such determinations, allowing more objective and precise decisions.
@@ -67,8 +65,6 @@ To prevent attacks on the Bitcoin network based on exploiting a flaw in Script, 
 
 
 \section{APPROACH}
-
-\textcolor{red}{\textit{Detailed description of the approach, and highlight the main technical difficulties and novelties. }}\\
 
 \subsection{Definition of Script Grammar}
 
@@ -93,7 +89,7 @@ $\bullet$ The source code of a script program is just a sequence of bytes and is
 
 $\bullet$ It was our hope that we could define operational semantics for op codes of previous versions of Script that caused crashes or other issues in the past.  Using these definitions, we would then show that the old definitions could be used to cause problems.  Unfortunately, there is very little documentation regarding how these errors came about.  The reference documentation itself only documents changes back to 2014 while most of the serious problems with Script were fixed in 2010. The only fix we were able to analyze was the change to \texttt{OP\_RETURN}.
 
-$\bullet$ \texttt{OP\_CHECKSIG} is a bitch to describe.  
+%$\bullet$ \texttt{OP\_CHECKSIG} is a bitch to describe.  
 
 \section{APPLICATIONS AND RESULTS}
 
@@ -145,9 +141,6 @@ Here we prove that some commands are redundant. Must explain why this can be des
 
 \section{RELATED WORK}
 
-
-\textcolor{red}{\textit{Detailed discussion of related work. Should stress how these relate to your work. Simply list and describe what other people did is not sufficient.}}\\
-
 To our knowledge, there has been no previous effort to provide a formal specification of the Script language. As a result, the existing documentation works as a rough guideline for our work but is not complete. Explanations of how Script works are located on the Bitcoin wiki [2] and the reference implementation [1].  
 
 The Bitcoin wiki is an explanation of how each opcode works in plain English. The explanations are not rigorous, and are not in a logical formalism that allows mathematical reasoning. There are many situations where descriptions are vague and can be interpreted in more than one way.  For example, the explanation of \texttt{OP\_LEFT} takes an argument to index a string and throws away everything to the right of the index, but it does not specify whether that operation is right-inclusive.
@@ -156,8 +149,6 @@ The reference implementation is much more thorough that the wiki but, being C++ 
 
 
 \section{CONCLUSIONS}
-
-\textcolor{red}{\textit{Again summarize the work and discuss possible future work.}}\\
 
 \addtolength{\textheight}{-12cm}   % This command serves to balance the column lengths
                                   % on the last page of the document manually. It shortens
