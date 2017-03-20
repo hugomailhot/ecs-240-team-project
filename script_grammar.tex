@@ -36,10 +36,11 @@ Script is intentionally constrainted: There language does not allow for the expr
 Script is defined by the specification provided by the reference implementation. 
 Script is  as sequences of bytecodes. In describing its semantics, we will generally not refer to the format of the values, but some commands in the language only have meaning if we take into account the fact that any part of a Script program is a byte vector. For this reason, we define byte vectors as the following, and will reserve \texttt{b} and \texttt{B} to express a byte and a byte vector, respectively.
 
-\hyperlink{OPSEM}{Section 2} presents a consistent and exhaustive BNF describing Script's syntax.
+\hyperlink{SYNTAX}{Section 2} presents a consistent and exhaustive BNF describing Script's syntax.
 
-\hyperlink{OPSEM}{Section 3} specifies the operational semantics of the syntactic constructs defined in \hyperlink{OPSEM}{Section 2}.
-\section{Syntax}
+\hyperlink{OPSEM}{Section 3} and \hyperlink{SmallStep}{Section 4} describe the big and small step operational semantics of these syntactic constructs.
+
+\hypertarget{SYNTAX}{\section{Syntax}}
 
 \subsection{Fundamental data types}
 \noindent
@@ -596,6 +597,7 @@ Run $C_1$ if top of stack is present and evaluates to true. Otherwise run $C_2$ 
 \inferrule
 {   
     \sigma(|S|)=L \hspace{3mm}
+    L > 0 \hspace{3mm}
     <\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
     <\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
     <C_1, \sigma_1> \Downarrow \sigma '
@@ -608,6 +610,7 @@ Run $C_1$ if top of stack is present and evaluates to true. Otherwise run $C_2$ 
 \inferrule
 {   
     \sigma(|S|)=L \hspace{3mm}
+    L > 0 \hspace{3mm}
     <\texttt{TEST $L$},\sigma> \Downarrow \texttt{FALSE} \hspace{3mm}
     <\texttt{DROP $L$},\sigma> \Downarrow \sigma ' \hspace{3mm}
 }
@@ -618,6 +621,7 @@ Run $C_1$ if top of stack is present and evaluates to true. Otherwise run $C_2$ 
 
 \inferrule
 {   \sigma(|S|)=L \hspace{3mm}
+    L > 0 \hspace{3mm}
     <\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
     <\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
     <C_1, \sigma_1> \Downarrow \sigma '
@@ -628,6 +632,7 @@ Run $C_1$ if top of stack is present and evaluates to true. Otherwise run $C_2$ 
 
 \inferrule
 {   \sigma(|S|)=L \hspace{3mm}
+    L > 0 \hspace{3mm}
     <\texttt{TEST $L$},\sigma> \Downarrow \texttt{FALSE} \hspace{3mm}
     <\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
     <C_2, \sigma_1> \Downarrow \sigma '
@@ -642,6 +647,7 @@ Run $C_1$ if top of stack is present and evaluates to false. Otherwise run $C_2$
 
 \inferrule
 {   \sigma(|S|)=L \hspace{3mm}
+    L > 0 \hspace{3mm}
     <\texttt{TEST $L$},\sigma> \Downarrow \texttt{FALSE} \hspace{3mm}
     <\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
     <C_1, \sigma_1> \Downarrow \sigma '
@@ -652,6 +658,7 @@ Run $C_1$ if top of stack is present and evaluates to false. Otherwise run $C_2$
 
 \inferrule
 {   \sigma(|S|)=L \hspace{3mm}
+    L > 0 \hspace{3mm}
     <\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
     <\texttt{DROP $L$},\sigma> \Downarrow \sigma ' \hspace{3mm}
 }
@@ -661,6 +668,7 @@ Run $C_1$ if top of stack is present and evaluates to false. Otherwise run $C_2$
 
 \inferrule
 {   \sigma(|S|)=L \hspace{3mm}
+    L > 0 \hspace{3mm}
     <\texttt{TEST $L$},\sigma> \Downarrow \texttt{FALSE} \hspace{3mm}
     <\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
     <C_1, \sigma_1> \Downarrow \sigma '
@@ -671,6 +679,7 @@ Run $C_1$ if top of stack is present and evaluates to false. Otherwise run $C_2$
 
 \inferrule
 {   \sigma(|S|)=L \hspace{3mm}
+    L > 0 \hspace{3mm}
     <\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
     <\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
     <C_2, \sigma_1> \Downarrow \sigma '
@@ -685,9 +694,17 @@ If top of stack is present and evaluates to true then remove top of stock and ma
 
 \inferrule
 {   \sigma(|S|)=L \hspace{3mm}
+    <\texttt{TEST $L$},\sigma> \Downarrow \texttt{FALSE} \hspace{3mm}
+    \sigma'(V)=\texttt{invalid}
+}
+{   <\texttt{OP\_VERIFY}, \sigma> \Downarrow \sigma '
+}
+\vspace{3mm}
+\inferrule
+{   \sigma(|S|)=L \hspace{3mm}
     <\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
     <\texttt{DROP $L$},\sigma> \Downarrow \sigma ' \hspace{3mm}
-    \sigma'(V)=\texttt{invalid}
+    \sigma'(V)=\texttt{valid}
 }
 {   <\texttt{OP\_VERIFY}, \sigma> \Downarrow \sigma '
 }
@@ -711,8 +728,9 @@ Unconditionally mark transaction as invalid. \\
 
 \inferrule
 {   
-    |S| = L \hspace{3mm}
-    S_L = x \hspace{3mm}
+    \sigma(|S|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
+    \sigma(S_L) = x \hspace{3mm}
     <\texttt{DROP } L, \sigma> \Downarrow \sigma_1
     <\texttt{PUSHALT } x, \sigma_1> \Downarrow \sigma'
 }
@@ -727,8 +745,9 @@ Unconditionally mark transaction as invalid. \\
 
 \inferrule
 {   
-    |AS| = L \hspace{3mm}
-    AS_L = x \hspace{3mm}
+    \sigma(|AS|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
+    \sigma(AS_L) = x \hspace{3mm}
     <\texttt{DROPALT } L, \sigma> \Downarrow \sigma_1
     <\texttt{PUSH } x, \sigma_1> \Downarrow \sigma'
 }
@@ -740,16 +759,7 @@ Unconditionally mark transaction as invalid. \\
 
 %  OP_IFDUP
 \subsubsection{OP\_IFDUP}
-If top of stack is present and non-zero, duplicate the top of the stack. \\
-
-\inferrule
-{
-    \sigma(S_{|S|}) = 0
-}
-{   
-    <\texttt{OP\_IFDUP}, \sigma > \Downarrow \sigma
-}
-\vspace{3mm}
+If top of stack is non-zero, duplicate the top of the stack. \\
 
 \inferrule
 {
@@ -842,7 +852,9 @@ Copy the byte-vector $n$ from the top onto the top of the stack, not counting th
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
     \sigma(S_L) = n \hspace{3mm}
+    L > n \hspace{3mm}
     <\texttt{DROP } L, \sigma> \Downarrow \sigma_1 \hspace{3mm}  
     <\texttt{PUSH } S_{L-n-1}, \sigma_1> \Downarrow \sigma'
 }
@@ -858,7 +870,9 @@ Move the byte-vector $n$ from the top onto the top of the stack, not counting th
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
     \sigma(S_L) = n \hspace{3mm}
+    L > n \hspace{3mm}
     <\texttt{DROP } L, \sigma> \Downarrow \sigma_1 \hspace{3mm}  
     <\texttt{PUSH } S_{L-n-1}, \sigma_1> \Downarrow \sigma_2
     <\texttt{DROP } L-n-1, \sigma_2> \Downarrow \sigma'
@@ -875,6 +889,7 @@ The top three items on the stack are rotated. Equivalently, move the byte-vector
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm}
+    L > 2 \hspace{3mm}
     <\texttt{PUSH } S_{L-2}, \sigma_1> \Downarrow \sigma_2
     <\texttt{DROP } L-2, \sigma_2> \Downarrow \sigma'
 }
@@ -890,6 +905,7 @@ The top two items on the stack are swapped. \\
 \inferrule
 {
     \sigma{|S|} = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     <\texttt{PUSH } S_{L-1}, \sigma_1> \Downarrow \sigma_2
     <\texttt{DROP } {L-1}, \sigma_2> \Downarrow \sigma'
 }
@@ -902,6 +918,7 @@ The item at the top of the stack is copied and inserted before the second-to-top
 
 \inferrule
 {   
+    \sigma(|S|) > 1 \hspace{3mm} 
     \sigma(S_{|S|}) = x \hspace{3mm} 
     \sigma(S_{|S|-1}) = y \hspace{3mm} 
     <\texttt{DROP } |S|, \sigma> \Downarrow \sigma_1 \hspace{3mm}
@@ -921,6 +938,7 @@ Removes the top two stack items. \\
 
 \inferrule
 {   
+    \sigma(|S|) > 1 \hspace{3mm}
     <\texttt{DROP } |S|, \sigma> \Downarrow \sigma_1 \hspace{3mm}
     <\texttt{DROP } |S|, \sigma_1> \Downarrow \sigma' \hspace{3mm} \\
 }
@@ -936,6 +954,7 @@ Duplicates the top two stack items. \\
 \inferrule
 {   
     \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     <\texttt{PUSH } S_{L-1}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
     <\texttt{PUSH } S_L, \sigma_1> \Downarrow \sigma' \hspace{3mm}
 }
@@ -951,6 +970,7 @@ Duplicates the top three stack items. \\
 \inferrule
 {   
     \sigma(|S|) = L \hspace{3mm}
+    L > 2 \hspace{3mm}
     <\texttt{PUSH } S_{L-2}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
     <\texttt{PUSH } S_{L-1}, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
     <\texttt{PUSH } S_L, \sigma_2> \Downarrow \sigma' \hspace{3mm}
@@ -967,6 +987,7 @@ Copies the pair of items two spaces back in the stack to the front. \\
 \inferrule
 {   
     \sigma(|S|) = L \hspace{3mm}
+    L > 3 \hspace{3mm}
     <\texttt{PUSH } S_{L-3}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
     <\texttt{PUSH } S_{L-2}, \sigma_1> \Downarrow \sigma' \hspace{3mm}
 }
@@ -982,6 +1003,7 @@ The fifth and sixth items back are moved to the top of the stack. \\
 \inferrule
 {   
     \sigma(|S|) = L \hspace{3mm}
+    L > 5 \hspace{3mm}
     <\texttt{PUSH } S_{L-5}, \sigma_2> \Downarrow \sigma_3 \hspace{3mm}
     <\texttt{PUSH } S_{L-4}, \sigma_3> \Downarrow \sigma' \hspace{3mm}
     <\texttt{DROP } L-5, \sigma> \Downarrow \sigma_1 \hspace{3mm}
@@ -999,6 +1021,7 @@ The first and second items are swapped. The third and fourth items are swapped. 
 \inferrule
 {   
     \sigma(|S|) = L \hspace{3mm}
+    L > 3 \hspace{3mm}
     \sigma(S_{L}) = x \hspace{3mm}
     \sigma(S_{L-1}) = y \hspace{3mm}
     <\texttt{DROP } L, \sigma> \Downarrow \sigma_1 \hspace{3mm}
@@ -1102,6 +1125,7 @@ Pushes the number of bytes of the top element of the stack. \\
 \inferrule
 {   
     \sigma(|S|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
     \sigma(S_L) = B \hspace{3mm}
     <\texttt{PUSH } |B|, \sigma> \Downarrow \sigma'
 }
@@ -1198,6 +1222,7 @@ Returns 1 if the two top elements are equal, 0 otherwise. \\
 \inferrule
 {   
     \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_L) = B_1 \hspace{3mm}
     \sigma(S_{L-1}) = B_2 \hspace{3mm}
     B_1 = B_2 \hspace{3mm}
@@ -1211,6 +1236,7 @@ Returns 1 if the two top elements are equal, 0 otherwise. \\
 \inferrule
 {   
     \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_L) = B_1 \hspace{3mm}
     \sigma(S_{L-1}) = B_2 \hspace{3mm}
     B_1 \neq B_2 \hspace{3mm}
@@ -1245,10 +1271,11 @@ Add 1 to the top of the stack. \\
 
 \inferrule
 {   
-    \sigma(|S|) = l \hspace{3mm}
-    \sigma(S_l) \Downarrow x \hspace{3mm}
+    \sigma(|S|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
+    \sigma(S_L) \Downarrow x \hspace{3mm}
     B \Downarrow x+1 \hspace{3mm}
-    <\texttt{DROP } l, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L, \sigma> \Downarrow \sigma_1 \hspace{3mm}
     <\texttt{PUSH } B, \sigma_1> \Downarrow \sigma'
 }
 {   
@@ -1263,10 +1290,11 @@ Subtract 1 from the top of the stack. \\
 
 \inferrule
 {   
-    \sigma(|S|) = l \hspace{3mm}
-    \sigma(S_l) \Downarrow x \hspace{3mm}
+    \sigma(|S|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
+    \sigma(S_L) \Downarrow x \hspace{3mm}
     B \Downarrow x-1 \hspace{3mm}
-    <\texttt{DROP } l, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L, \sigma> \Downarrow \sigma_1 \hspace{3mm}
     <\texttt{PUSH } B, \sigma_1> \Downarrow \sigma'
 }
 {   
@@ -1281,10 +1309,11 @@ The top of the stack is replaced with the byte-vector representing it's absolute
 
 \inferrule
 {   
-    \sigma(|S|) = l \hspace{3mm}
-    \sigma(S_l) \Downarrow x \hspace{3mm}
+    \sigma(|S|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
+    \sigma(S_L) \Downarrow x \hspace{3mm}
     B \Downarrow |x| \hspace{3mm}
-    <\texttt{DROP } l, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L, \sigma> \Downarrow \sigma_1 \hspace{3mm}
     <\texttt{PUSH } B, \sigma_1> \Downarrow \sigma'
 }
 {   
@@ -1299,10 +1328,11 @@ The top of the stack is negated. \\
 
 \inferrule
 {   
-    \sigma(|S|) = l \hspace{3mm}
-    \sigma(S_l) \Downarrow x \hspace{3mm}
+    \sigma(|S|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
+    \sigma(S_L) \Downarrow x \hspace{3mm}
     B \Downarrow -x \hspace{3mm}
-    <\texttt{DROP } l, \sigma> \Downarrow \sigma_1 \hspace{3mm}
+    <\texttt{DROP } L, \sigma> \Downarrow \sigma_1 \hspace{3mm}
     <\texttt{PUSH } B, \sigma_1> \Downarrow \sigma'
 }
 {   
@@ -1345,9 +1375,10 @@ Let the inputs be the top two items of the stack, $a$ and $b$. Push the byte-vec
 
 \inferrule
 {   
-    \sigma(|S|) = l \hspace{3mm}
-    \sigma(S_l) \Downarrow x \hspace{3mm}
-    \sigma(S_{l-1}) \Downarrow y \hspace{3mm}
+    \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
+    \sigma(S_L) \Downarrow x \hspace{3mm}
+    \sigma(S_{L-1}) \Downarrow y \hspace{3mm}
     B \Downarrow x+y \hspace{3mm}
     <\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
     <\texttt{PUSH B}, \sigma_1> \Downarrow \sigma' \hspace{3mm}
@@ -1364,9 +1395,10 @@ Let the inputs be the top two items of the stack, $a$ and $b$. Push the byte-vec
 
 \inferrule
 {   
-    \sigma(|S|) = l \hspace{3mm}
-    \sigma(S_l) \Downarrow x \hspace{3mm}
-    \sigma(S_{l-1}) \Downarrow y \hspace{3mm}
+    \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
+    \sigma(S_L) \Downarrow x \hspace{3mm}
+    \sigma(S_{L-1}) \Downarrow y \hspace{3mm}
     B \Downarrow y-x \hspace{3mm}
     <\texttt{OP\_2DROP}, \sigma> \Downarrow \sigma_1 \hspace{3mm}
     <\texttt{PUSH B}, \sigma_1> \Downarrow \sigma' \hspace{3mm}
@@ -1384,6 +1416,7 @@ Let the inputs be the top two items of the stack, $a$ and $b$. If both $a$ and $
 \inferrule
 {   
     \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_L) \Downarrow a \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow b \hspace{3mm}
     a \neq 0 \land b \neq 0 \hspace{3mm}
@@ -1398,6 +1431,7 @@ Let the inputs be the top two items of the stack, $a$ and $b$. If both $a$ and $
 \inferrule
 {   
     \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_L) \Downarrow a \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow b \hspace{3mm}
     a = 0 \lor b = 0 \hspace{3mm}
@@ -1417,6 +1451,7 @@ Let the inputs be the top two items of the stack, $a$ and $b$. If either $a$ or 
 \inferrule
 {   
     \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_L) \Downarrow a \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow b \hspace{3mm}
     a \neq 0 \lor b \neq 0 \hspace{3mm}
@@ -1431,6 +1466,7 @@ Let the inputs be the top two items of the stack, $a$ and $b$. If either $a$ or 
 \inferrule
 {   
     \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_L) \Downarrow a \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow b \hspace{3mm}
     a \neq 0 \land b \neq 0 \hspace{3mm}
@@ -1494,6 +1530,7 @@ Let the inputs be the element on the top of the stack(b) and the element second 
 
 \inferrule
 {   \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
     \sigma(S_L) \Downarrow b \hspace{3mm}
     a \geq b \hspace{3mm}
@@ -1506,6 +1543,7 @@ Let the inputs be the element on the top of the stack(b) and the element second 
 
 \inferrule
 {   \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
     \sigma(S_L) \Downarrow b \hspace{3mm}
     a < b \hspace{3mm}
@@ -1522,6 +1560,7 @@ Let the inputs be the element on the top of the stack(b) and the element second 
 
 \inferrule
 {   \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
     \sigma(S_L) \Downarrow b \hspace{3mm}
     a \leq b \hspace{3mm}
@@ -1534,6 +1573,7 @@ Let the inputs be the element on the top of the stack(b) and the element second 
 
 \inferrule
 {   \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
     \sigma(S_L) \Downarrow b \hspace{3mm}
     a > b \hspace{3mm}
@@ -1550,6 +1590,7 @@ Let the inputs be the element on the top of the stack(b) and the element second 
 
 \inferrule
 {   \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
     \sigma(S_L) \Downarrow b \hspace{3mm}
     a > b \hspace{3mm}
@@ -1562,6 +1603,7 @@ Let the inputs be the element on the top of the stack(b) and the element second 
 
 \inferrule
 {   \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
     \sigma(S_L) \Downarrow b \hspace{3mm}
     a \leq b \hspace{3mm}
@@ -1578,6 +1620,7 @@ Let the inputs be the element on the top of the stack(b) and the element second 
 
 \inferrule
 {   \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
     \sigma(S_L) \Downarrow b \hspace{3mm}
     a < b \hspace{3mm}
@@ -1590,6 +1633,7 @@ Let the inputs be the element on the top of the stack(b) and the element second 
 
 \inferrule
 {   \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
     \sigma(S_L) \Downarrow b \hspace{3mm}
     a \geq b \hspace{3mm}
@@ -1606,7 +1650,8 @@ the larger of the two elements at the top of the stack is removed. \\
 
 \inferrule
 {
-    \sigma(|S|) = L \hspace{3mm})
+    \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
     \sigma(S_{L}) \Downarrow b \hspace{3mm}
     a \leq b \hspace{3mm}
@@ -1620,6 +1665,7 @@ the larger of the two elements at the top of the stack is removed. \\
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
     \sigma(S_{L}) \Downarrow b \hspace{3mm}
     b < a \hspace{3mm}
@@ -1637,6 +1683,7 @@ the smaller of the two elements on the top of the stack is removed. \\
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
     \sigma(S_{L}) \Downarrow b \hspace{3mm}
     a \geq b \hspace{3mm}
@@ -1650,6 +1697,7 @@ the smaller of the two elements on the top of the stack is removed. \\
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm}
+    L > 1 \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow a \hspace{3mm}
     \sigma(S_{L}) \Downarrow b \hspace{3mm}
     b > a \hspace{3mm}
@@ -1667,6 +1715,7 @@ the input is the 3 elements at the top of the stack x, min, max where max is the
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm}
+    L > 2 \hspace{3mm}
     \sigma(S_{L}) \Downarrow max \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow min \hspace{3mm}
     \sigma(S_{L-2}) \Downarrow x \hspace{3mm}
@@ -1681,6 +1730,7 @@ the input is the 3 elements at the top of the stack x, min, max where max is the
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm}
+    L > 2 \hspace{3mm}
     \sigma(S_{L}) \Downarrow max \hspace{3mm}
     \sigma(S_{L-1}) \Downarrow min \hspace{3mm}
     \sigma(S_{L-2}) \Downarrow x \hspace{3mm}
@@ -1702,6 +1752,7 @@ The element at the top of the stack is hashed with RIPEMD-160. \\
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
     B = \textsc{RIPEMD-160}(\sigma(S_L)) \hspace{3mm}
     <\texttt{DROP }L, \sigma> \Downarrow sigma_1 \hspace{3mm}
     <\texttt{PUSH }B, \sigma_1> \Downarrow sigma' \hspace{3mm}
@@ -1717,6 +1768,7 @@ The element at the top of the stack is hashed with SHA-1. \\
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
     B = \textsc{SHA-1}(\sigma(S_L)) \hspace{3mm}
     <\texttt{DROP }L, \sigma> \Downarrow sigma_1 \hspace{3mm}
     <\texttt{PUSH }B, \sigma_1> \Downarrow sigma' \hspace{3mm}
@@ -1731,6 +1783,7 @@ The element at the top of the stack is hashed with SHA-256. \\
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
     B = \textsc{SHA-256}(\sigma(S_L)) \hspace{3mm}
     <\texttt{DROP }L, \sigma> \Downarrow sigma_1 \hspace{3mm}
     <\texttt{PUSH }B, \sigma_1> \Downarrow sigma' \hspace{3mm}
@@ -1745,6 +1798,7 @@ The element at the top of the stack is hashed with SHA-256 and then with RIPEMD-
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
     B = \textsc{RIPEMD-160}(\textsc{SHA-256}(\sigma(S_L))) \hspace{3mm}
     <\texttt{DROP }L, \sigma> \Downarrow sigma_1 \hspace{3mm}
     <\texttt{PUSH }B, \sigma_1> \Downarrow sigma' \hspace{3mm}
@@ -1760,6 +1814,7 @@ The element at the top of the stack is hashed twice with SHA-256. \\
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm}
+    L > 0 \hspace{3mm}
     B = \textsc{SHA-256}(\textsc{SHA-256}(\sigma(S_L))) \hspace{3mm}
     <\texttt{DROP }L, \sigma> \Downarrow sigma_1 \hspace{3mm}
     <\texttt{PUSH }B, \sigma_1> \Downarrow sigma' \hspace{3mm}
@@ -1788,7 +1843,7 @@ All disabled, reserved or otherwise invalid opcodes transition to an invalid sta
 {<\texttt{dcom},\sigma> \Downarrow \sigma[V=invalid]}
 
 
-\section{Operational Semantics -- Small Step Semantics}
+\hypertarget{SmallStep}{\section{Operational Semantics -- Small Step Semantics}}
  
 \subsection{Local reduction rules}
 
