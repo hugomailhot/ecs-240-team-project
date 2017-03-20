@@ -18,8 +18,8 @@
 %\usepackage{epsfig} % for postscript graphics files
 %\usepackage{mathptmx} % assumes new font selection scheme installed
 %\usepackage{times} % assumes new font selection scheme installed
-%\usepackage{amsmath} % assumes amsmath package installed
-%\usepackage{amssymb}  % assumes amsmath package installed
+\usepackage{amsmath} % assumes amsmath package installed
+\usepackage{amssymb}  % assumes amsmath package installed
 \usepackage{xcolor}
 
 \title{\LARGE \bf
@@ -55,8 +55,6 @@ Bitcoin transactions are validated using a specialized language called Script. D
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{INTRODUCTION}
 
-\textcolor{red}{\textit{To describe and motivate the problem or your survey topic }}\\
-
 Script is what Bitcoin uses to encode transactions over the network. It is purposefully restricted, and most notably lacks a mechanism for looping and guarantees termination. To properly learn the language and understand its semantics, one must read through the catalog of \textit{opcodes} (hex values used as operators) and analyze its C++ reference implementation.
 
 As a postfix language written in sequences of bytes, Script is not an easy language to pick up and understand. It is even harder to assess the effect that proposed modifications to the language might have on the guarantees that it must provide. In the past, Script has been progressively restricted in response to discovered vulnerabilities in the language. The restrictions eliminated the vulnerabilities, at the cost of reducing the expressiveness of the language. It is not clear that all of the restrictions added were necessary to produce the desired end of securing the language. A formal description and eventually specification would help in such determinations, allowing more objective and precise decisions.
@@ -67,8 +65,6 @@ To prevent attacks on the Bitcoin network based on exploiting a flaw in Script, 
 
 
 \section{APPROACH}
-
-\textcolor{red}{\textit{Detailed description of the approach, and highlight the main technical difficulties and novelties. }}\\
 
 \subsection{Definition of Script Grammar}
 The bulk of our project consists in providing a well-formed and consistent definition of the Script language. This includes a description of the syntax that the text of scripts must conform to, as well descriptions of the operational semantics--big-step and small-step--by which the scripts evaluate. Due to its breadth, we defer the full description of this grammar to [Appendix A].
@@ -110,38 +106,54 @@ $\bullet$ The source code of a script program is just a sequence of bytes and is
 
 $\bullet$ It was our hope that we could define operational semantics for op codes of previous versions of Script that caused crashes or other issues in the past.  Using these definitions, we would then show that the old definitions could be used to cause problems.  Unfortunately, there is very little documentation regarding how these errors came about.  The reference documentation itself only documents changes back to 2014 while most of the serious problems with Script were fixed in 2010. The only fix we were able to analyze was the change to \texttt{OP\_RETURN}.
 
-$\bullet$ \texttt{OP\_CHECKSIG} is a bitch to describe.  
+%$\bullet$ \texttt{OP\_CHECKSIG} is a bitch to describe.  
 
 \section{APPLICATIONS AND RESULTS}
 
- \textcolor{red}{\textit{If appropriate, you should describe your implementation and experimental results. Explain how to interpret your numbers and results if applicable.}}
-
-\textcolor{blue}{[Motivation for the application cases we chose.]}
-
-
+In this section, we use our grammar 
 
 \subsection{Programs written in the current version of Script halt within time linear in the length of the program}
 
+\subsubsection{Background}
 For the Bitcoin network to function properly, it is important that the network form a single connected component. A type of attack against the network is to try and cut some nodes from the rest of the network, and then ``double-spend'' the same amount of money on the two disconnected components, which will both accept the transactions. Such a cut can be achieved by performing a DoS attack against a group of nodes that collectively ensure connectivity between two otherwise separated subnetworks. One way to perform a DoS attack could be to have a node attempt to evaluate a Script program with an unreasonable execution time. It is therefore important to guarantee that a Script program will terminate within a certain amount of steps.
 
+\subsubsection{Analysis}
 Using the small-step semantics defined in Section 3 of the appendix, we see that no reduction rule yields its entire input, as was the case with the \texttt{while} local reduction rule in IMP. That is to say, no recursion is allowed. At most a proper subset of the input is conserved after applying the rule, when it is not completely replaced by \texttt{OP\_NOP}, Script's equivalent of the \texttt{skip} command. This guarantees that every small-step reduction progresses towards termination of the program. Furthermore, the global reduction rule trivially entails that for any program that is not only \texttt{OP\_NOP}, there exists a unique context reducible by a local reduction rule. Thus we have that every Script program halts.
 
 We also know, from our description of Script's big-step semantics in Section 2 of the appendix, that every command requires a constant number of checks and operations on the stack. So we have that a Script program will always halt, and that the number of operations required to evaluate it is at most linear in the amount of commands it contains.
 
-Given that the main nodes on the Bitcoin network enforce a limit on the length of Script programs one can include in a transaction, guaranteed linear execution time results in an absolute maximum number of steps for a standard Script program. This helps in protecting against DoS attacks based on maliciously crafted transactions. Furthermore, this maximum number of steps was deliberately lowered by requiring that the most computationally expensive opcodes, \texttt{OP\_CHECKSIG}, be contained exactly once in a valid standard transaction [4].
+Given that the main nodes on the Bitcoin network enforce a limit on the length of Script programs one can include in a transaction, guaranteed linear execution time results in an absolute maximum number of steps for a standard Script program. This helps in protecting against DoS attacks based on maliciously crafted transactions. Furthermore, this maximum number of steps was deliberately lowered by requiring that the most computationally expensive opcode, \texttt{OP\_CHECKSIG}, be contained exactly once in a valid standard transaction [4].
 
 
-\subsection{Previous versions of Script allowed undesirable programs}
-Here we prove how previous states were problematic
+\subsection{Previous versions of Script allowed skeleton key scripts}
 
-\subsection{The Script command set could be reduced without loss of expressiveness}
-Here we prove that some commands are redundant. Must exaplin why this can be desirable sometimes, but also why some of them are clearly uselessly redundant.
+\subsubsection{Background}
+The way an amount on Bitcoin is spent on the network is by evaluating to $\sigma[V=valid]$\footnote{See Appendix section 2 for a description of state configurations.} the concatenation $C = BA$ of a locking script A, provided by the payer, and an unlocking script B provided by the recipient. The intended scenario is that $A$ will contain a validation condition, which will check whether the output of $B$ is adequate. Typically, $B$ will have to provide a hash that proves they are the intended recipient of the money spent by the payer, and $A$ will know what to expect as a proof. In that way, $A$ is a guarantee to the payer that the money can only be received by the intended recipient. However, a careless definition of the \texttt{OP\_RETURN} opcode in previous versions of Script made it possible to program skeleton key scripts that could spend any amount of money, without proving the recipient's identity.
 
+\subsubsection{Analysis}
+A skeleton script would have the following property: 
+$$\exists B. \forall A. \hspace{1.5mm} BA \Downarrow \sigma[V=valid]$$
+
+This is equivalent to saying that either (1) $B$ is such that for any $A$, $BA$ evaluates to a valid state, or (2) $B$ evaluates to a state from which any $A$ will evaluate to a valid state. Case (2) was never possible, since one could write a script $A = \texttt{OP\_0}$, that pushes 0 on the stack. Upon normal program termination, if the top stack value is 0, then the program is deemed invalid. Thus for this $A$ there is no script $B$ such that $BA \Downarrow \sigma[V=valid]$. Case (1), however, was made possible by the semantics of \texttt{OP\_RETURN} prior to July 31 2010. In local reduction rule form, \texttt{OP\_RETURN} was defined as follows:
+%
+$$<\texttt{OP\_RETURN com}, \sigma> \hspace{3mm} \longrightarrow \hspace{3mm} <\texttt{OP\_NOP}, \sigma>$$
+%
+Evaluating \texttt{OP\_RETURN} results in the immediate termination of the program, \textit{without any changes to the state}. Consider now a script $B = \texttt{OP\_1 OP\_RETURN}$, and the evaluation of $BA$ for any arbitrary script $A$:
+
+\begin{enumerate}
+  \item \texttt{1} is pushed onto the stack
+  \item \texttt{OP\_RETURN} triggers program termination
+  \item The top stack value is nonzero, and so the program is deemed valid
+\end{enumerate}
+
+Clearly, that such a script was possible completely defeated the transaction validation process. \texttt{OP\_RETURN} semantics were subsequently changed to the following:
+%
+$$<\texttt{OP\_RETURN com}, \sigma> \hspace{1mm} \longrightarrow \hspace{1mm} <\texttt{OP\_NOP}, \sigma[V=invalid]>$$
+%
+thus ensuring that its evaluation in a script invariably resulted in a rejected transaction.
+As no other command in the language can cause early termination of the program with a valid state, we can now say that there exists no skeleton key script that could serve to unlock any arbitrary locking script.
 
 \section{RELATED WORK}
-
-
-\textcolor{red}{\textit{Detailed discussion of related work. Should stress how these relate to your work. Simply list and describe what other people did is not sufficient.}}\\
 
 To our knowledge, there has been no previous effort to provide a formal specification of the Script language. As a result, the existing documentation works as a rough guideline for our work but is not complete. Explanations of how Script works are located on the Bitcoin wiki [2] and the reference implementation [1].  
 
@@ -151,8 +163,6 @@ The reference implementation is much more thorough that the wiki but, being C++ 
 
 
 \section{CONCLUSIONS}
-
-\textcolor{red}{\textit{Again summarize the work and discuss possible future work.}}\\
 
 \addtolength{\textheight}{-12cm}   % This command serves to balance the column lengths
                                   % on the last page of the document manually. It shortens
