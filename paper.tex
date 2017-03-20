@@ -106,7 +106,7 @@ $\bullet$ The source code of a script program is just a sequence of bytes and is
 
 $\bullet$ It was our hope that we could define operational semantics for op codes of previous versions of Script that caused crashes or other issues in the past.  Using these definitions, we would then show that the old definitions could be used to cause problems.  Unfortunately, there is very little documentation regarding how these errors came about.  The reference documentation itself only documents changes back to 2014 while most of the serious problems with Script were fixed in 2010. The only fix we were able to analyze was the change to \texttt{OP\_RETURN}.
 
-%$\bullet$ \texttt{OP\_CHECKSIG} is a bitch to describe.  
+$\bullet$ \texttt{OP\_CHECKSIG} and related op-codes refer to the serialized form of the surrounding transaction. This is important as the signature which \texttt{OP\_CHECKSIG} verifies serves dually to prove that the author of the transaction is in control of the relevant private key (corresponding to the public key which hashes to the address to which the relevant locked bitcoins were spent) and in fact authored the transaction presently under consideration. Due to the complexities of referencing the serialized form the transaction with big-step semantic inference rules, we did not, after much struggle, provide such rules for such op-codes.
 
 \section{APPLICATIONS AND RESULTS}
 
