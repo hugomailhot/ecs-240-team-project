@@ -93,6 +93,8 @@ $\bullet$ It was our hope that we could define operational semantics for op code
 
 \section{APPLICATIONS AND RESULTS}
 
+In this section, we use our grammar 
+
 \subsection{Programs written in the current version of Script halt within time linear in the length of the program}
 
 \subsubsection{Background}
@@ -103,7 +105,7 @@ Using the small-step semantics defined in Section 3 of the appendix, we see that
 
 We also know, from our description of Script's big-step semantics in Section 2 of the appendix, that every command requires a constant number of checks and operations on the stack. So we have that a Script program will always halt, and that the number of operations required to evaluate it is at most linear in the amount of commands it contains.
 
-Given that the main nodes on the Bitcoin network enforce a limit on the length of Script programs one can include in a transaction, guaranteed linear execution time results in an absolute maximum number of steps for a standard Script program. This helps in protecting against DoS attacks based on maliciously crafted transactions. Furthermore, this maximum number of steps was deliberately lowered by requiring that the most computationally expensive opcodes, \texttt{OP\_CHECKSIG}, be contained exactly once in a valid standard transaction [4].
+Given that the main nodes on the Bitcoin network enforce a limit on the length of Script programs one can include in a transaction, guaranteed linear execution time results in an absolute maximum number of steps for a standard Script program. This helps in protecting against DoS attacks based on maliciously crafted transactions. Furthermore, this maximum number of steps was deliberately lowered by requiring that the most computationally expensive opcode, \texttt{OP\_CHECKSIG}, be contained exactly once in a valid standard transaction [4].
 
 
 \subsection{Previous versions of Script allowed skeleton key scripts}
