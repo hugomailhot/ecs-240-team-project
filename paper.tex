@@ -159,7 +159,7 @@ The Bitcoin wiki Script article contains an explanation of how each opcode works
 
 The C++ reference implementation, by necessity, completely specifies the semantics of the language. However, the implementation also specifies details that are irrelevant to the syntactic correctness or valid/invalid judgement of a Script program. For example, the reference implementation defines a series of error codes, one for each possible cause of early termination with invalid state. These errors all cause the program execution to halt in the same way, and mainly serve to communicate the cause of an early termination to the running environment. Taking these various error codes into account needlessly complexifies the type of analyses we presented in our results section. Additionally, as is the case with the existing Bitcoin wiki resource, we cannot directly use the language's implementation as axioms and rules to be used in a theorem prover.
 
-Our proposed grammar, in constrast, unambiguously describes the behavior of Script, is easier to reason about the C++ code, and can (hopefully eventually) serve as basis for further analytic work.
+Our proposed grammar, in constrast, unambiguously describes the behavior of Script, is easier to reason about than the C++ code, and can (hopefully eventually) serve as basis for further analytic work.
 
 
 \section{CONCLUSIONS}
