@@ -67,30 +67,28 @@ To prevent attacks on the Bitcoin network based on exploiting a flaw in Script, 
 \section{APPROACH}
 
 \subsection{Definition of Script Grammar}
-The bulk of our project consists in providing a well-formed and consistent definition of the Script language. This includes a description of the syntax that the text of scripts must conform to, as well descriptions of the operational semantics--big-step and small-step--by which the scripts evaluate. Due to its breadth, we defer the full description of this grammar to [Appendix A].
+The bulk of our project consists in providing a well-formed and consistent definition of the Script language. This includes a description of the syntax that the text of scripts must conform to as well as descriptions of the operational semantics by which the scripts evaluate. Due to the breadth of this component of our work, we defer exposition of the grammar to [Appendix A].
 
-The reference implementation of Bitcoin defines the network protocol. Script, as the language which expresses and encodes transactions, exists as a subset of the Bitcoin protocol and is therefore also defined by the reference implementation.
-
-In order to generate this grammar, it was ultimately necessary to directly turn to the source code of the reference implementation to validate the correctness of our grammar. Proving the consistency or equivalence of our work with the reference implementation is outside the scope of this project and is left as future work. In the process of forming both our understanding and therefrom
-
-we searched through several reputable sources in order to gain a working understanding of Script, eventually turning to the reference Bitcoin implementation to secure and progressively refine our understanding.
-
+As the Bitcoin protocol lacks any formal specification by which it is defined, it is well accepted that the reference implementation defines the protocol. We therefore turned to the reference implementation to construct our description of Script's grammar---while also heavily upon the [Bitcoin Wiki] and [Mastering Bitcoin] to gain a detailed if not authoritative conceptual understanding of the relevant concepts and constructs. Insomuch as our grammar is consistent with this reference, it is correct. Insomuch as it diverges it is incorrect. Formally proving the consistency or equivalence of our grammar with the reference implementation is outside the scope of this project and is left as future work. Indeed, our grammar is purposefully incomplete as discussed below (\S II.C) due to the disproportionate expressive burden imposed by a few op-codes.
 \subsubsection{Syntax}
 
-First, it was necessary to define the syntax. We made heavy use of the [Bitcoin Wiki] to this end. Script is a Forth-like, stack-based language. It is parsed and evaluated left to right [wiki/script]. As it is defined by it's reference implementation, in order to implement the language one must ensure that in all circumstances one's implementation interprets the binary serialization of a script in a manner compatible with the reference.
+Script is a stack-based language, bearing some semblance to Forth. It is parsed and evaluated left to right [Bitcoin Wiki/script]. The syntax of Script is defined by the binary serializations of script that reference implementation understands to be well-formed. We discover this by reviewing relevant literature (of which there is not much) and the source code itself, to glean such syntactic structures.
 
-It was therefore quite natural to define the syntax of the literal bytes that form programs. This is consistent with the internal subdivisions one may discern within a script program. Script defines words or opcodes with defined effects on the state of the program. We look to both the [Bitcoin Wiki] and the source code to retrieve a full list of defined opcodes and to infer and ultimately describe their operations.
+The "text" of a Script program is its binary serialization. In most contexts, our syntax (accurately) considers this text to be tokenized into a byte vector. Ultimately all syntactic constructs in Script are either commands which alter the state of the program in a defined manner or contextual data which parameterize the behavior of some commands.
 
-The syntax in [Appendix A] defines terms the form of a transaction, with scripts existing within transactions in defined positions. We provide aliases for opcodes' hex values and group commands by both their effect--arithmetic, control, crypto, etc, and their form--whether they are "atomic" or whether the opcode relies on following words or bytes to affect how it transform the state of the program and to give the opcode syntactic validity--the script \texttt{OP\_IF OP\_0 OP\_ELSE} is invalid because it has no \texttt{OP\_ENDIF}.
+We divide commands into "simple-word commands", termed \texttt{scom}, which are single byte commands that take no contextual program text to modify their behavior; "multiple-word commands", termed \texttt{mcom}, which rely upon contextual program text to modify their behavior---such as \texttt{OP\_IF}/\texttt{OP\_ELSE}/\texttt{OP\_ENDIF} or \texttt{OP\_PUSHDATA1}; and disabled commands, termed \texttt{dcom}, which consist of op-codes reserved for future use, disabled to remove perceived attack vectors, or reserved for testing. Commands are constructed from op-codes or words which are single byte literals with special meaning along with any relevant contextual data.
+
+We define our syntax sufficiently to be aware of the transactions formats in which scripts are embedded in the hope that it may be used in the future to describe the semantics of commands which require such awareness---\texttt{OP\_CHECKSIG}.
 
 \subsubsection{Operational semantics}
 
-After providing a sufficient syntax, we moved to describe the operational semantics. We described the big-step semantics and the small-step semantics of the language using a combination of the reference implementation of the language [Ref] and of the Script page of the Bitcoin wiki [Ref].
+We provide both big-step and small-step operational semantics.
 
-We provide inference rules for every opcode. The state of the program consists of the stack, $S$, the alt-stack, $AS$, the validity $V$, and the rest of the program to be parsed $P$. Script operates primarily on byte-vectors representing numbers or arbitrary data. We speak of a byte-vector evaluating to a number under a set of encoding rules specific to Bitcoin but not completely described.
+The state of the program consists entirely of the stack, $S$, the alt-stack, $AS$, and the validity $V$. The stack contains byte-vectors. The reference implementation defines the encoding used to map from byte-vectors to numbers. We take the existence of an inference rule describing said encoding for granted.
 
+We describe the semantic meaning of each command with one or more corresponding inference rules. In order to contain the size of our description, we provide that well-formed programs with no corresponding inference rule for the execution of a command in a given state transition to the state in which the script is determined to be invalid and execution halts.
 
-A number of op-codes have been disabled due to perceived vulnerabilities, reserved for future use, or reserved for internal use in testing. These are given their own syntactic category and result in an invalid state.
+A number of op-codes have been disabled due to perceived vulnerabilities, reserved for future use, or reserved for internal use in testing. We provide inference rules for disabled op-codes, but also include them in \texttt{dcom}. We provide a contradictory inference rule for \texttt{dcom} which causes relevant commands to unequivocally evaluate to an invalid state. We provide these to allow for the modeling of the behavior of Script before these were disabled. If they are to be used, these op-codes must not be considered to be in \texttt{dcom}.
 
 Scripts exist in transactions and op-codes exist which directly reference their transaction context. We omit these because of the disproportionate descriptive burden they introduce.
 
