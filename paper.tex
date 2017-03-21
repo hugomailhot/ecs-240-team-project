@@ -108,7 +108,7 @@ $\bullet$ \texttt{OP\_CHECKSIG} and related op-codes refer to the serialized for
 
 \section{APPLICATIONS AND RESULTS}
 
-In this section, we use our grammar 
+In this section, we make use of our formal specification to reason about execution time bounds of Script programs and to explain how a flaw in a prior version of the language was fixed.
 
 \subsection{Programs written in the current version of Script halt within time linear in the length of the program}
 
@@ -153,11 +153,13 @@ As no other command in the language can cause early termination of the program w
 
 \section{RELATED WORK}
 
-To our knowledge, there has been no previous effort to provide a formal specification of the Script language. As a result, the existing documentation works as a rough guideline for our work but is not complete. Explanations of how Script works are located on the Bitcoin wiki [2] and the reference implementation [1].  
+To our knowledge, no previous effort was made to provide a formal description of Script. The Bitcoin developers community relies mostly on a combination of the Bitcoin wiki Script article [2] and Script's C++ reference implementation [1] to learn the language or reason about it.
 
-The Bitcoin wiki is an explanation of how each opcode works in plain English. The explanations are not rigorous, and are not in a logical formalism that allows mathematical reasoning. There are many situations where descriptions are vague and can be interpreted in more than one way.  For example, the explanation of \texttt{OP\_LEFT} takes an argument to index a string and throws away everything to the right of the index, but it does not specify whether that operation is right-inclusive.
+The Bitcoin wiki Script article contains an explanation of how each opcode works in plain English, and information about the standard script templates that main nodes of the network will accept. While it does provide an informal explanation for each opcode (which came in handy when writing the operational semantics), its descriptions are rather unrigourous, and sometimes even ambiguous. For example, the explanation of \texttt{OP\_LEFT} is that it takes an argument to index a string and throws away everything to the right of the index, but it does not specify whether that operation is right-inclusive. Finally, this resource cannot be used as input in automated theorem proving software. 
 
-The reference implementation is much more thorough that the wiki but, being C++ code, it is much harder to interpret and is not in a format that allows for logical reasoning. If we turn to Forth to find something related, we can find standard specifications like the Forth-83 standard (http://forth.sourceforge.net/standard/fst83/fst83-12.htm). However even these specifications are given in plain English.
+The C++ reference implementation, by necessity, completely specifies the semantics of the language. However, the implementation also specifies details that are irrelevant to the syntactic correctness or valid/invalid judgement of a Script program. For example, the reference implementation defines a series of error codes, one for each possible cause of early termination with invalid state. These errors all cause the program execution to halt in the same way, and mainly serve to communicate the cause of an early termination to the running environment. Taking these various error codes into account needlessly complexifies the type of analyses we presented in our results section. Additionally, as is the case with the existing Bitcoin wiki resource, we cannot directly use the language's implementation as axioms and rules to be used in a theorem prover.
+
+Our proposed grammar, in constrast, unambiguously describes the behavior of Script, is easier to reason about the C++ code, and can (hopefully eventually) serve as basis for further analytic work.
 
 
 \section{CONCLUSIONS}
