@@ -161,6 +161,14 @@ Our proposed grammar, in constrast, unambiguously describes the behavior of Scri
 
 \section{CONCLUSIONS}
 
+In this research project we propose the first formal description of Bitcoin's Script language. We describe Script's syntax and operational semantics, both big-step and small-step. We report difficulties encountered in the process, such as how to model byte vector representation in a compact and expressive notation, and suggest solutions to these problems. We then exemplify how this grammar can be used to reason about the language and its use, by showing an analysis of execution time bounds and describing how past operational semantics were flawed.
+
+One of the main advantages of formalizing the description of a language is that it allows automated formal reasoning about it. A logical next step to this project would be to adapt our description to make it usable by a particular formal verification engine. For example, it would be useful to show that certain undesirable states are unreachable using a specific subset of the language. Many Bitcoin developers push for changes and extensions to the capabilities of the language or to the accepted standard programs over the network. Others, for fear of introducing vulnerabilities in the network, argue that the community should be satisfied with the current state of affairs. Having a robust and automated tool to prove whether a change to the language caused unintended consequences would prove useful in mediating these discussions. In any case, we feel that continuing to develop and refine a formal specification of Script should help the community attain a better understanding of a language on which it relies so heavily.
+
+
+
+
+
 \addtolength{\textheight}{-12cm}   % This command serves to balance the column lengths
                                   % on the last page of the document manually. It shortens
                                   % the textheight of the last page by a suitable amount.
