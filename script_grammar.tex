@@ -79,7 +79,7 @@ Script is  as sequences of bytecodes. In describing its semantics, we will gener
 \subsection{Script}
 \noindent
 \texttt{script ::= com | com script} \\
-\texttt{com ::= scom | mcom}
+\texttt{com ::= scom | mcom | ucom | dcom}
 
 \subsubsection{Single-Word Commands}
 \noindent \hangindent=0.7cm
@@ -89,14 +89,12 @@ Script is  as sequences of bytecodes. In describing its semantics, we will gener
 
 \noindent \hangindent=0.7cm
 \texttt{scom\_push ::=
-  OP\_0 | OP\_FALSE | OP\_1NEGATE | \sout{OP\_RESERVED} | OP\_1 | OP\_TRUE |
+  OP\_0 | OP\_FALSE | OP\_1NEGATE | OP\_1 | OP\_TRUE |
   OP\_2 | OP\_3 | OP\_4 | OP\_5 | OP\_6 | OP\_7 | OP\_8 | OP\_9 | OP\_10 |
   OP\_11 | OP\_12 | OP\_13 | OP\_14 | OP\_15 | OP\_16} \\
 
 \noindent \hangindent=0.7cm
-\texttt{scom\_control ::=
- OP\_NOP | \sout{OP\_VER} | \sout{OP\_VERIF} | \sout{OP\_VERNOTIF} | OP\_VERIFY
- | OP\_RETURN} \\
+\texttt{scom\_control ::= OP\_VERIFY} \\
 
 \noindent \hangindent=0.7cm
 \texttt{scom\_stack ::=
@@ -113,7 +111,7 @@ Script is  as sequences of bytecodes. In describing its semantics, we will gener
 \noindent \hangindent=0.7cm
 \texttt{scom\_bitlogic ::=
   \sout{OP\_INVERT} | \sout{OP\_AND} | \sout{OP\_OR} | \sout{OP\_XOR} |
-  OP\_EQUAL | OP\_EQUALVERIFY | \sout{OP\_RESERVED1} | \sout{OP\_RESERVED2}} \\
+  OP\_EQUAL | OP\_EQUALVERIFY} \\
 
 \noindent \hangindent=0.7cm
 \texttt{scom\_numeric ::=
@@ -132,32 +130,15 @@ Script is  as sequences of bytecodes. In describing its semantics, we will gener
 
 \noindent \hangindent=0.7cm
 \texttt{scom\_expansion ::=
-  \sout{OP\_NOP1} | OP\_CHECKLOCKTIMEVERIFY | OP\_NOP2 |
-  OP\_CHECKSEQUENCEVERIFY | OP\_NOP3 | \sout{OP\_NOP4} | \sout{OP\_NOP5} |
-  \sout{OP\_NOP6} | \sout{OP\_NOP7} | \sout{OP\_NOP8} | \sout{OP\_NOP9} |
-  \sout{OP\_NOP10}} \\
+  OP\_CHECKLOCKTIMEVERIFY | OP\_NOP2 |
+  OP\_CHECKSEQUENCEVERIFY | OP\_NOP3 } \\
 
+\subsubsection{Ungrouped Commands}
 \noindent \hangindent=0.7cm
-\texttt{scom\_template ::=
-  \sout{OP\_SMALLINTEGER} | \sout{OP\_PUBKEYS} | \sout{OP\_PUBKEYHASH} |
-  \sout{OP\_PUBKEY} | \sout{OP\_INVALIDOPCODE}}
-
-\subsubsection{Multiple-Word Commands}
-\noindent \hangindent=0.7cm
-\texttt{mcom ::= mcom\_if | mcom\_notif | mcom\_push} \\
-
-% compund control commands
-\noindent
-\texttt{mcom\_if ::= OP\_IF script OP\_ENDIF | OP\_IF script mcom\_else OP\_ENDIF} \\
-\texttt{mcom\_notif ::= OP\_NOTIF script OP\_ENDIF | OP\_NOTIF script mcom\_else OP\_ENDIF} \\
-\texttt{mcom\_else ::= OP\_ELSE script | OP\_ELSE script mcom\_else } \\
-
-% compound push commands
-\noindent \hangindent=0.7cm
-\texttt{mcom\_push ::=
-  OP\_PUSHBYTES$_N$ B$^N$ | OP\_PUSHDATA1 B$^1$ B |OP\_PUSHDATA2 B$^2$ B
+\texttt{ucom ::= OP\_NOP | OP\_IF | OP\_NOTIF | OP\_ELSE | OP\_ENDIF | OP\_RETURN
+  | OP\_PUSHBYTES$_N$ B$^N$ | OP\_PUSHDATA1 B$^1$ B | OP\_PUSHDATA2 B$^2$ B
   | OP\_PUSHDATA4 B$^4$ B}
-  
+
 \subsubsection{Disabled Commands}
 \noindent \hangindent=0.7cm
 \texttt{dcom ::=
@@ -213,7 +194,7 @@ Script is  as sequences of bytecodes. In describing its semantics, we will gener
 \textbf{\centering push value} \\
 \texttt{OP\_0 ::= 0x00  } \\
 \texttt{OP\_FALSE ::= OP\_0  } \\
-\texttt{{OP\_PUSHBYTES$^N$} ::= 0x01-0x4b} \\
+\texttt{{OP\_PUSHBYTES$_N$} ::= 0x01-0x4b} \\
 \texttt{OP\_PUSHDATA1 ::= 0x4c  } \\
 \texttt{OP\_PUSHDATA2 ::= 0x4d  } \\
 \texttt{OP\_PUSHDATA4 ::= 0x4e  } \\
@@ -622,98 +603,47 @@ Do nothing. \\
 Run $C_1$ if top of stack is present and evaluates to true. Otherwise run $C_2$ if stack is present and evaluates to false. \\
 
 \inferrule
-{   
-    \sigma(|S|)=L \hspace{3mm}
-    L > 0 \hspace{3mm}
-    <\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
-    <\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
-    <C_1, \sigma_1> \Downarrow \sigma '
+{
+	\sigma_0(|S|)=L \hspace{3mm}
+	L > 0 \hspace{3mm}
+	<\texttt{PUSH\_EX $S_L$}, \sigma_0> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{DROP $L$}, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
 }
-{   
-    <\texttt{OP\_IF $C_1$ OP\_ENDIF}> \Downarrow \sigma '
+{
+	<\texttt{OP\_IF}, \sigma_0> \Downarrow \sigma_2
 }
 \vspace{3mm}
-
 \inferrule
-{   
-    \sigma(|S|)=L \hspace{3mm}
-    L > 0 \hspace{3mm}
-    <\texttt{TEST $L$},\sigma> \Downarrow \texttt{FALSE} \hspace{3mm}
-    <\texttt{DROP $L$},\sigma> \Downarrow \sigma ' \hspace{3mm}
+{
+	\sigma_0(|S|)=L \hspace{3mm}
+	L > 0 \hspace{3mm}
+	<\texttt{PUSH\_EX !$S_L$}, \sigma_0> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{DROP $L$}, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
 }
-{   
-    <\texttt{OP\_IF $C_1$ OP\_ENDIF}> \Downarrow \sigma '
+{
+	<\texttt{OP\_NOTIF}, \sigma_0> \Downarrow \sigma_2
 }
 \vspace{3mm}
-
 \inferrule
-{   \sigma(|S|)=L \hspace{3mm}
-    L > 0 \hspace{3mm}
-    <\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
-    <\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
-    <C_1, \sigma_1> \Downarrow \sigma '
+{
+	\sigma_0(|ES|)=L_E \hspace{3mm}
+	L_E > 0 \hspace{3mm}
+	<\texttt{DROP\_EX $L_E$}, \sigma_0> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{PUSH\_EX $!\sigma_0(ES_{L_E})$}, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
 }
-{   <\texttt{OP\_IF $C_1$ OP\_ELSE $C_2$ OP\_ENDIF}> \Downarrow \sigma '
+{
+	<\texttt{OP\_ELSE}, \sigma_0> \Downarrow \sigma_1
 }
 \vspace{3mm}
-
 \inferrule
-{   \sigma(|S|)=L \hspace{3mm}
-    L > 0 \hspace{3mm}
-    <\texttt{TEST $L$},\sigma> \Downarrow \texttt{FALSE} \hspace{3mm}
-    <\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
-    <C_2, \sigma_1> \Downarrow \sigma '
+{
+	\sigma_0(|ES|)=L_E \hspace{3mm}
+	L_E > 0 \hspace{3mm}
+	<\texttt{DROP\_EX $L_E$}, \sigma_0> \Downarrow \sigma_1 \hspace{3mm}
 }
-{   <\texttt{OP\_IF $C_1$ OP\_ELSE $C_2$ OP\_ENDIF}> \Downarrow \sigma '
+{
+	<\texttt{OP\_ENDIF}, \sigma_0> \Downarrow \sigma_1
 }
-\vspace{3mm}
-
-% OP_NOTIF, OP_ELSE, OP_ENDIF
-\subsubsection{OP\_NOTIF, OP\_ELSE, OP\_ENDIF}
-Run $C_1$ if top of stack is present and evaluates to false. Otherwise run $C_2$ if stack is present and evaluates to true. \\
-
-\inferrule
-{   \sigma(|S|)=L \hspace{3mm}
-    L > 0 \hspace{3mm}
-    <\texttt{TEST $L$},\sigma> \Downarrow \texttt{FALSE} \hspace{3mm}
-    <\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
-    <C_1, \sigma_1> \Downarrow \sigma '
-}
-{   <\texttt{OP\_NOTIF $C_1$ OP\_ENDIF}> \Downarrow \sigma '
-}
-\vspace{3mm}
-
-\inferrule
-{   \sigma(|S|)=L \hspace{3mm}
-    L > 0 \hspace{3mm}
-    <\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
-    <\texttt{DROP $L$},\sigma> \Downarrow \sigma ' \hspace{3mm}
-}
-{   <\texttt{OP\_NOTIF $C_1$ OP\_ENDIF}> \Downarrow \sigma '
-}
-\vspace{3mm}
-
-\inferrule
-{   \sigma(|S|)=L \hspace{3mm}
-    L > 0 \hspace{3mm}
-    <\texttt{TEST $L$},\sigma> \Downarrow \texttt{FALSE} \hspace{3mm}
-    <\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
-    <C_1, \sigma_1> \Downarrow \sigma '
-}
-{   <\texttt{OP\_NOTIF $C_1$ OP\_ELSE $C_2$ OP\_ENDIF}> \Downarrow \sigma '
-}
-\vspace{3mm}
-
-\inferrule
-{   \sigma(|S|)=L \hspace{3mm}
-    L > 0 \hspace{3mm}
-    <\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
-    <\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
-    <C_2, \sigma_1> \Downarrow \sigma '
-}
-{   <\texttt{OP\_NOTIF $C_1$ OP\_ELSE $C_2$ OP\_ENDIF}> \Downarrow \sigma '
-}
-\vspace{3mm}
 
 % OP_VERIFY
 \subsubsection{OP\_VERIFY := 0x69}
@@ -1879,72 +1809,39 @@ Here the rule for $<\texttt{scom}, \sigma[S=s, V=v]>$ is a metarule. In reality 
 Still, the following rules help understand how a Script program is evaluated from left to right.
 
 \begin{align*}
-&<\texttt{OP\_NOP com}, \sigma> 
-    \hspace{3mm}
-\longrightarrow 
-    \hspace{3mm}
-<\texttt{com}, \sigma>
-\\
-&<\texttt{scom}, \sigma[S=s, V=v]> 
-    \hspace{3mm}
-\longrightarrow 
-    \hspace{3mm}
-<\texttt{OP\_NOP}, \sigma[S=s', V=v']>\footnotemark
-\\
-&<\texttt{OP\_RETURN com}, \sigma> 
-    \hspace{3mm}
-\longrightarrow 
-    \hspace{3mm}
-<\texttt{OP\_NOP}, \sigma[V = false]>
-\\
-&<\texttt{OP\_IF com OP\_ENDIF}, \sigma[S_{|S|} \neq 0]> 
-    \hspace{3mm}
-\longrightarrow 
-    \hspace{3mm}
-<\texttt{com}, \sigma> 
-\\
-&<\texttt{OP\_IF com OP\_ENDIF}, \sigma[S_{|S|} = 0]> 
-    \hspace{3mm}
-\longrightarrow 
-    \hspace{3mm}
-<\texttt{OP\_NOP}, \sigma> 
-\\
-&<\texttt{OP\_NOTIF com OP\_ENDIF}, \sigma[S_{|S|} \neq 0]> 
-    \hspace{3mm}
-\longrightarrow 
-    \hspace{3mm}
-<\texttt{OP\_NOP}, \sigma> 
-\\
-&<\texttt{OP\_NOTIF com OP\_ENDIF}, \sigma[S_{|S|} = 0]> 
-    \hspace{3mm}
-\longrightarrow 
-    \hspace{3mm}
-<\texttt{com}, \sigma> 
-\\
-&<\texttt{OP\_IF com$_1$ OP\_ELSE com$_2$ OP\_ENDIF}, \sigma[S_{|S|} \neq 0]> 
-    \hspace{3mm}
-\longrightarrow 
-    \hspace{3mm}
-<\texttt{com$_1$}, \sigma> 
-\\
-&<\texttt{OP\_IF com$_1$ OP\_ELSE com$_2$ OP\_ENDIF}, \sigma[S_{|S|} = 0]> 
-    \hspace{3mm}
-\longrightarrow 
-    \hspace{3mm}
-<\texttt{com$_2$}, \sigma> 
-\\
-&<\texttt{OP\_NOTIF com$_1$ OP\_ELSE com$_2$ OP\_ENDIF}, \sigma[S_{|S|} \neq 0]> 
-    \hspace{3mm}
-\longrightarrow 
-    \hspace{3mm}
-<\texttt{com$_2$}, \sigma> 
-\\
-&<\texttt{OP\_NOTIF com$_1$ OP\_ELSE com$_2$ OP\_ENDIF}, \sigma[S_{|S|} = 0]> 
-    \hspace{3mm}
-\longrightarrow 
-    \hspace{3mm}
-<\texttt{com$_1$}, \sigma> 
-\\
+&<\texttt{OP\_NOP script}, \sigma> \hspace{3mm}
+	\longrightarrow \hspace{3mm}
+	<\texttt{script}, \sigma> \\
+&<\texttt{scom}, \sigma[S=s, V=v]> \hspace{3mm}
+	\longrightarrow \hspace{3mm}
+	<\texttt{OP\_NOP}, \sigma[S=s', V=v']>\footnotemark \\
+&<\texttt{OP\_RETURN}, \sigma> \hspace{3mm}
+	\longrightarrow \hspace{3mm}
+	<\texttt{OP\_NOP}, \sigma[V = invalid]> \\
+&<\texttt{OP\_IF}, \sigma[S_{|S|}=x, |ES|=L_E]> \hspace{3mm}
+	\longrightarrow \hspace{3mm}
+	<\texttt{OP\_NOP}, \sigma[|ES|=L_{E}+1, ES_{L_E+1}=x]>\\
+&<\texttt{OP\_NOTIF}, \sigma[S_{|S|}=x, |ES|=L_E]> \hspace{3mm}
+	\longrightarrow \hspace{3mm}
+	<\texttt{OP\_NOP}, \sigma[|ES|=L_{E}+1, ES_{L_E+1}=!x]>\\
+&<\texttt{OP\_ELSE}, \sigma[ES_{|ES|}=x]> \hspace{3mm}
+	\longrightarrow \hspace{3mm}
+	<\texttt{OP\_NOP}, \sigma[ES_{|E|}=!x]>\\	
+&<\texttt{OP\_ENDIF}, \sigma[|ES|=L_E]> \hspace{3mm}
+	\longrightarrow \hspace{3mm}
+	<\texttt{OP\_NOP}, \sigma[|ES|=L_{E}-1]>\\
+&<\texttt{OP\_PUSHBYTES$_N$ B$_1^N$}, \sigma[|S|=L]> \hspace{3mm}
+	\longrightarrow \hspace{3mm}
+	<\texttt{OP\_NOP}, \sigma[|S|=L+1, S_{L+1}=\texttt{B}_2]>\\
+&<\texttt{OP\_PUSHDATA1 B$_1^1$ B$_2$}, \sigma[|S|=L]> \hspace{3mm}
+	\longrightarrow \hspace{3mm}
+	<\texttt{OP\_NOP}, \sigma[|S|=L+1, S_{L+1}=\texttt{B}_2]>\\
+&<\texttt{OP\_PUSHDATA2 B$_1^2$ B$_2$}, \sigma[|S|=L]> \hspace{3mm}
+	\longrightarrow \hspace{3mm}
+	<\texttt{OP\_NOP}, \sigma[|S|=L+1, S_{L+1}=\texttt{B}_2]>\\
+&<\texttt{OP\_PUSHDATA4 B$_1^4$ B$_2$}, \sigma[|S|=L]> \hspace{3mm}
+	\longrightarrow \hspace{3mm}
+	<\texttt{OP\_NOP}, \sigma[|S|=L+1, S_{L+1}=\texttt{B}_2]>\\
 \end{align*}
 \footnotetext{In reality there is one local reduction rule per single-word command. For each of them the state is changed in the way described in the big-step operational semantics. The important information here is that every single-word command reduces to \texttt{OP\_NOP} in a single step.}
 \subsection{Global reduction rules}
