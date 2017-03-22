@@ -351,15 +351,50 @@ Script is  as sequences of bytecodes. In describing its semantics, we will gener
 
 \pagebreak[2]
 
-\hypertarget{OPSEM}{\section{Operational Semantics -- Big Step Semantics}}
+\section{State description}
 
 At any given point of a program's execution, the state is entirely described by the following elements:
 
 \begin{itemize}
     \item The stack $S$, whose elements $S_i$ for $1 \leq i \leq |S|$ are indexed starting from the bottom;
     \item The alt-stack $AS$, an auxiliary stack indexed in the same way;
+    \item The execution stack $ES$, containing only boolean values;
     \item The validity variable $V$, equal to \texttt{true} by default.
 \end{itemize}
+
+\noindent
+$S$ is the main stack, which most opcodes interact with in the way one might expect from a Forth-like language. $AS$ can serve to temporarily store values and facilitate complex manipulations.\\ 
+
+\noindent
+$ES$ serves to control whether commands are executed or not. Its contents are affected by \texttt{OP\_IF}, \texttt{OP\_NOTIF}, \texttt{OP\_ELSE} and \texttt{OP\_ENDIF}. For all commands, if $ES$ contains at least a \texttt{false} value, it will be ignored. \texttt{OP\_IF}, \texttt{OP\_NOTIF}, \texttt{OP\_ELSE} and \texttt{OP\_ENDIF} are excepted from this constraint, and we explain how in their bg-step operational semantics.
+
+\section{Validity judgement}
+
+At termination of a Script program, the return value is always whether the program was valid or not, that is, whether the transaction it encodes is valid or not.\\
+
+\noindent
+A program is deemed valid unless the following occurs:
+
+\begin{itemize}
+    \item During execution, 
+        \begin{itemize}
+            \item $V$ was set to $invalid$
+            \item Syntactic parsing failed
+            \item No inference rule was available
+        \end{itemize} 
+
+    \item After execution
+        \begin{itemize}
+            \item $ES$ is not empty
+            \item The top value in $S$ is zero, or there is none
+        \end{itemize} 
+\end{itemize} 
+
+
+\hypertarget{OPSEM}{\section{Operational Semantics -- Big Step Semantics}}
+
+
+
 
 Any state in which $V = \texttt{false}$ causes the program to immediately terminate with a special exception, handled by the environment in which the program was being run.
 
@@ -476,7 +511,8 @@ Push the byte-vector representing 0 onto the stack. \\
 \inferrule
 {
     \sigma(|S|) = L \hspace{3mm} 
-    B \Downarrow 0
+    B \Downarrow 0 \hspace{3mm} 
+    ES_{|ES|} = \texttt{true}
 }
 {
     <\texttt{OP\_0}, \sigma> \Downarrow \sigma[|S|=L+1, S_{L+1}=B]
@@ -625,7 +661,7 @@ Run $C_1$ if top of stack is present and evaluates to true. Otherwise run $C_2$ 
 {   
     \sigma(|S|)=L \hspace{3mm}
     L > 0 \hspace{3mm}
-    <\texttt{TEST $L$},\sigma> \Downarrow \texttt{TRUE} \hspace{3mm}
+    S_L \neq 0 \hspace{3mm}
     <\texttt{DROP $L$},\sigma> \Downarrow \sigma_1 \hspace{3mm}
     <C_1, \sigma_1> \Downarrow \sigma '
 }
