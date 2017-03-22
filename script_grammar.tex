@@ -374,10 +374,10 @@ In order to more succinctly define the operational semantics of Script, we defin
 \subsubsection{PUSH}
 \inferrule
 {
-    |S| = L
+    \sigma_0(|S|) = L
 }
-{   
-    <\texttt{PUSH } B, \sigma> \Downarrow \sigma[|S| = L+1, S_{|S|} = B]
+{ 
+    <\texttt{PUSH } B, \sigma_0> \Downarrow \sigma[|S| = L+1, S_{L+1} = B]
 }
 \vspace{3mm}
 
@@ -385,30 +385,57 @@ In order to more succinctly define the operational semantics of Script, we defin
 \subsubsection{DROP}
 \inferrule
 {
-    \sigma(|S|) = L \hspace{3mm} 
-    B \Downarrow n \hspace{3mm} 
+    \sigma_0(|S|) = L \hspace{3mm} 
     L \geq n
 }
 {
-    <\texttt{DROP } B, \sigma> \Downarrow \sigma[S_i = S_{i+1} \hspace{3mm} \forall i. \hspace{1mm} n \leq i < L]
+    <\texttt{DROP } n, \sigma_0> \Downarrow \sigma[S_i = \sigma_0(S_{i+1}) \hspace{3mm} \forall i. \hspace{1mm} n \leq i < L]
 }
 \vspace{3mm}
 
 % PUSH_ALT
 \subsubsection{PUSH\_ALT}
 \inferrule
-{|AS| = L}
-{<\texttt{PUSH\_ALT } B, \sigma> \Downarrow \sigma[|AS| = L+1, AS_{|AS|} = B]}
+{
+    \sigma_0(|AS|) = L
+}
+{ 
+    <\texttt{PUSH\_ALT } B, \sigma_0> \Downarrow \sigma[|AS| = L+1, AS_{|L+1|} = B]
+}
 \vspace{3mm}
 
 % DROP_ALT
 \subsubsection{DROP\_ALT}
 \inferrule
 {
-    \sigma(|AS|) = L \hspace{3mm} \sigma(|AS|) \geq B
+    \sigma_0(|AS|) = L \hspace{3mm} 
+    L \geq n
 }
 {
-    <\texttt{DROP\_ALT } B, \sigma> \Downarrow \sigma[AS_i = AS_{i+1} \hspace{3mm} \forall i. \hspace{1mm} B \leq i < L]
+    <\texttt{DROP\_ALT } n, \sigma_0> \Downarrow \sigma[AS_i = \sigma_0(AS_{i+1}) \hspace{3mm} \forall i. \hspace{1mm} n \leq i < L]
+}
+\vspace{3mm}
+
+% PUSH_EX
+\subsubsection{PUSH\_EX}
+\inferrule
+{
+    \sigma_0(|ES|) = L
+}
+{ 
+    <\texttt{PUSH\_EX } b, \sigma_0> \Downarrow \sigma[|ES| = L+1, ES_{L+1} = b]
+}
+\vspace{3mm}
+
+% DROP_EX
+\subsubsection{DROP\_EX}
+\inferrule
+{
+    \sigma_0(|ES|) = L \hspace{3mm} 
+    L \geq n
+}
+{
+    <\texttt{DROP\_EX } n, \sigma_0> \Downarrow \sigma[ES_i = \sigma_0(ES_{i+1}) \hspace{3mm} \forall i. \hspace{1mm} n \leq i < L]
 }
 \vspace{3mm}
 
@@ -417,12 +444,12 @@ In order to more succinctly define the operational semantics of Script, we defin
 \subsubsection{TEST}
 \inferrule
 {   
-    \sigma(|S|) \geq x \hspace{3mm}
-    \sigma(S_x) \Downarrow t \hspace{3mm} 
+    \sigma_0(|S|) \geq x \hspace{3mm}
+    \sigma_0(S_x) \Downarrow t \hspace{3mm} 
     t = 0
 }
 {
-    <\texttt{TEST $x$}, \sigma> \Downarrow FALSE
+    <\texttt{TEST $x$}, \sigma_0> \Downarrow FALSE
 }
 \vspace{3mm}
 
