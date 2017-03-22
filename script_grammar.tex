@@ -20,7 +20,7 @@
 \maketitle
 
 
-\section{Intdoduction}
+\section{Introduction}
 
 Script is a constrained stack-based language inspired by Forth.
 
@@ -1874,7 +1874,9 @@ All disabled, reserved or otherwise invalid opcodes transition to an invalid sta
  
 \subsection{Local reduction rules}
 
-[No need to add PUSHDATA commands: these can be described as atomic commands, if we remember that the PUSHDATA opcode is only part of the push commands defined in the syntax - Hugo]
+Here the rule for $<\texttt{scom}, \sigma[S=s, V=v]>$ is a metarule. In reality we would need one distinct rule for each big-step semantics rule described in the preceding section. There would be quite a bit of redundancy in doing so, and so we just express here that both the stack $S$ and the validity $V$ in the resulting state might have changed. 
+
+Still, the following rules help understand how a Script program is evaluated from left to right.
 
 \begin{align*}
 &<\texttt{OP\_NOP com}, \sigma> 
