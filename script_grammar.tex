@@ -640,9 +640,9 @@ Commands which execute while FALSE exists anywhere within the execution stack ar
 \inferrule
 {
 	\sigma_0(|S|)=L \hspace{3mm}
+	\texttt{FALSE} \notin |ES|  \hspace{3mm}
 	L > 0 \hspace{3mm}
-	B \Downarrow Bool(S_L) \hspace{3mm}
-	<\texttt{PUSH\_EX $B$}, \sigma_0> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{PUSH\_EX $Bool(S_L)$}, \sigma_0> \Downarrow \sigma_1 \hspace{3mm}
 	<\texttt{DROP $L$}, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
 }
 {
@@ -652,9 +652,20 @@ Commands which execute while FALSE exists anywhere within the execution stack ar
 \inferrule
 {
 	\sigma_0(|S|)=L \hspace{3mm}
+	\texttt{FALSE} \in |ES|  \hspace{3mm}
 	L > 0 \hspace{3mm}
-	B \Downarrow \neg Bool(S_L) \hspace{3mm}
-	<\texttt{PUSH\_EX $B$}, \sigma_0> \Downarrow \sigma_1 \hspace{3mm}
+	<\texttt{PUSH\_EX FALSE}, \sigma_0> \Downarrow \sigma_1 \hspace{3mm}
+}
+{
+	<\texttt{OP\_IF}, \sigma_0> \Downarrow \sigma_1
+}
+\vspace{3mm}
+\inferrule
+{
+	\sigma_0(|S|)=L \hspace{3mm}
+	\texttt{FALSE} \notin |ES|  \hspace{3mm}
+	L > 0 \hspace{3mm}
+	<\texttt{PUSH\_EX $\neg Bool(S_L)$}, \sigma_0> \Downarrow \sigma_1 \hspace{3mm}
 	<\texttt{DROP $L$}, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
 }
 {
@@ -663,9 +674,20 @@ Commands which execute while FALSE exists anywhere within the execution stack ar
 \vspace{3mm}
 \inferrule
 {
+	\sigma_0(|S|)=L \hspace{3mm}
+	\texttt{FALSE} \in |ES|  \hspace{3mm}
+	L > 0 \hspace{3mm}
+	<\texttt{PUSH\_EX FALSE}, \sigma_0> \Downarrow \sigma_1 \hspace{3mm}
+}
+{
+	<\texttt{OP\_NOTIF}, \sigma_0> \Downarrow \sigma_1
+}
+\vspace{3mm}
+\inferrule
+{
 	\sigma_0(|ES|)=L_E \hspace{3mm}
 	L_E > 0 \hspace{3mm}
-	B \Downarrow \neg Bool(\sigma_0(ES_{L_E})) \hspace{3mm}
+	B = \neg Bool(\sigma_0(ES_{L_E})) \hspace{3mm}
 	<\texttt{DROP\_EX $L_E$}, \sigma_0> \Downarrow \sigma_1 \hspace{3mm}
 	<\texttt{PUSH\_EX $B$}, \sigma_1> \Downarrow \sigma_2 \hspace{3mm}
 }
