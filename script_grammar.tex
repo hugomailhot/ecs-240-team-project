@@ -336,7 +336,7 @@ At any given point of a program's execution, the state is entirely described by 
     \item The stack $S$, whose elements $S_i$ for $1 \leq i \leq |S|$ are indexed starting from the bottom;
     \item The alt-stack $AS$, an auxiliary stack indexed in the same way;
     \item The execution stack $ES$, containing only boolean values;
-    \item The validity variable $V$, equal to $valid$ by default.
+    \item The validity variable $V$, equal to \texttt{true} by default.
 \end{itemize}
 
 \noindent
@@ -631,8 +631,15 @@ Do nothing. \\
 }
 
 % OP_IF, OP_ELSE, OP_ENDIF
-\subsubsection{OP\_IF, OP\_ELSE, OP\_ENDIF}
-Run $C_1$ if top of stack is present and evaluates to true. Otherwise run $C_2$ if stack is present and evaluates to false. \\
+\subsubsection{OP\_IF, OP\_NOTIF, OP\_ELSE, OP\_ENDIF}
+Control commands modify the execution stack which control execution of all other commands.
+\begin{itemize}
+	\item \texttt{OP\_IF} adds removes the top of the stack, casts it to TRUE or FALSE and places it on the execution stack.
+	\item \texttt{OP\_NOTIF} adds removes the top of the stack, casts it to TRUE or FALSE, negates it, and places it on the execution stack.
+	\item \texttt{OP\_ELSE} replaces the top of the execution stack with its negation.
+	\item \texttt{OP\_ENDIF} removes the top of the execution stack.
+\end{itemize}
+Commands which execute while FALSE exists anywhere within the execution stack are ignored. The transaction is marked as invalid if the execution stack is nonempty when script the terminates. \\
 
 \inferrule
 {
