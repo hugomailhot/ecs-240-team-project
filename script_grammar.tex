@@ -31,14 +31,15 @@ Transactions consist of inputs and outputs, both of which include scripts. A tra
 
 Script program syntax is defined in terms of byte-commands. Each command is one byte long. Not all bytes are defined as valid commands and many bytes which are defined have syntactic restrictions on the following program bytes which must hold in order for the program to be well-formed. Script defines 173 such commands, each corresponding to a particular byte, also called \textit{words} or \textit{opcodes}. For example, the command that adds 1 to the value on top of the stack, is written \texttt{0x8b}. These opcodes have human-readable aliases to make description of the language easier. For example, the opcode \texttt{0x8b} is referred to as \texttt{OP\_1ADD} in the reference implementation's source code and documentation.
 
-Script is intentionally constrainted: There language does not allow for the expression of loops or recursion. This is desirable, guaranteeing that the runtime of a Script program is linear with the size of the program.
+Script is intentionally constrainted: there language does not allow for the expression of loops or recursion. This is desirable, guaranteeing that the runtime of a Script program is always finite.
 
-Script is defined by the specification provided by the reference implementation. 
-Script is  as sequences of bytecodes. In describing its semantics, we will generally not refer to the format of the values, but some commands in the language only have meaning if we take into account the fact that any part of a Script program is a byte vector. For this reason, we define byte vectors as the following, and will reserve \texttt{b} and \texttt{B} to express a byte and a byte vector, respectively.
 
 \hypertarget{SYNTAX}{\section{Syntax}}
 
 \subsection{Fundamental data types}
+Script is written as sequences of bytecodes. In describing its semantics, we will generally not refer to the format of the values, but some commands in the language only have meaning if we take into account the fact that any part of a Script program is a byte vector. For this reason, we define byte vectors as the following, and will reserve \texttt{b} and \texttt{B} to express a byte and a byte vector, respectively.\\
+
+
 \noindent
 \texttt{b ::= 0x00 | 0x01 | ... | 0xFF} \\
 \texttt{B ::= b | b B} \\
@@ -343,7 +344,7 @@ At any given point of a program's execution, the state is entirely described by 
 $S$ is the main stack, which most opcodes interact with in the way one might expect from a Forth-like language. $AS$ can serve to temporarily store values and facilitate complex manipulations.\\ 
 
 \noindent
-$ES$ serves to control whether commands are executed or not. Its contents are affected by \texttt{OP\_IF}, \texttt{OP\_NOTIF}, \texttt{OP\_ELSE} and \texttt{OP\_ENDIF}. For all commands, if $ES$ contains at least a \texttt{false} value, it will be ignored. \texttt{OP\_IF}, \texttt{OP\_NOTIF}, \texttt{OP\_ELSE} and \texttt{OP\_ENDIF} are excepted from this constraint, and we explain how in their bg-step operational semantics.
+$ES$ serves to control whether commands are executed or not. Its contents are affected by \texttt{OP\_IF}, \texttt{OP\_NOTIF}, \texttt{OP\_ELSE} and \texttt{OP\_ENDIF}. For all commands, if $ES$ contains at least a \texttt{false} value, it will be ignored. \texttt{OP\_IF}, \texttt{OP\_NOTIF}, \texttt{OP\_ELSE} and \texttt{OP\_ENDIF} are excepted from this constraint, and we explain how in their big-step operational semantics.
 
 \section{Validity judgement}
 
@@ -353,28 +354,22 @@ At termination of a Script program, the return value is always whether the progr
 A program is deemed valid unless the following occurs:
 
 \begin{itemize}
-    \item During execution, 
+    \item During execution:
         \begin{itemize}
             \item $V$ was set to $invalid$
             \item Syntactic parsing failed
             \item No inference rule was available
         \end{itemize} 
 
-    \item After execution
+    \item After execution:
         \begin{itemize}
             \item $ES$ is not empty
             \item The top value in $S$ is zero, or there is none
         \end{itemize} 
-\end{itemize} 
+\end{itemize} \pagebreak
 
 
 \hypertarget{OPSEM}{\section{Operational Semantics -- Big Step Semantics}}
-
-
-
-
-Any state in which $V = \texttt{false}$ causes the program to immediately terminate with a special exception, handled by the environment in which the program was being run.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Utility rules
@@ -493,7 +488,7 @@ Push the byte-vector representing 0 onto the stack. \\
 }
 {
     <\texttt{OP\_0}, \sigma> \Downarrow \sigma[|S|=L+1, S_{L+1}=B]
-}
+}\pagebreak
 
 % OP_N
 \subsubsection{OP\_N, \textit{OP\_PUSHNBYTES}}
@@ -614,6 +609,7 @@ Push the byte-vector representing the number specified in the word name onto the
 {\sigma(|S|) = L \hspace{3mm} B \Downarrow N}
 {<\texttt{OP\_PUSHN}, \sigma> \Downarrow 
     \sigma[|S|=L+1, S_{L+1}=B]}
+\pagebreak
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Flow Control}
@@ -622,7 +618,7 @@ Push the byte-vector representing the number specified in the word name onto the
 
 % OP_NOP
 \subsubsection{OP\_NOP}
-Do nothing. \\
+Do nothing. 
 
 \inferrule
 {\quad}
@@ -814,6 +810,7 @@ Duplicate the top of the stack. \\
 }
 \vspace{3mm}
 
+
 % OP_NIP
 \subsubsection{OP\_NIP}
 Remove the byte-vector second from the top of the stack. \\ 
@@ -828,6 +825,8 @@ Remove the byte-vector second from the top of the stack. \\
     <\texttt{OP\_NIP}, \sigma > \Downarrow \sigma'
 }
 \vspace{3mm}
+
+\pagebreak
 
 % OP_OVER
 \subsubsection{OP\_OVER}
@@ -930,6 +929,8 @@ The item at the top of the stack is copied and inserted before the second-to-top
     <\texttt{OP\_TUCK}, \sigma > \Downarrow \sigma'
 }
 \vspace{3mm}
+
+\pagebreak
 
 % OP_2DROP
 \subsubsection{OP\_2DROP}
@@ -1035,6 +1036,8 @@ The first and second items are swapped. The third and fourth items are swapped. 
 }
 \vspace{3mm}
 
+\pagebreak
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Splice}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1133,7 +1136,7 @@ Pushes the number of bytes of the top element of the stack. \\
 }
 \vspace{3mm}
 
-
+\pagebreak
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Bitwise Logic}
@@ -1477,6 +1480,7 @@ Let the inputs be the top two items of the stack, $a$ and $b$. If either $a$ or 
 }
 \vspace{3mm}
 
+\pagebreak
 
 % OP_NUMEQUAL
 \subsubsection{OP\_NUMEQUAL}
@@ -1582,6 +1586,8 @@ Let the inputs be the element on the top of the stack(b) and the element second 
 {   <\texttt{OP\_GREATERTHAN}, \sigma> \Downarrow \sigma '
 }
 \vspace{3mm}
+
+\pagebreak
 
 % OP_LESSTHANOREQUAL
 \subsubsection{OP\_LESSTHANOREQUAL}
@@ -1707,6 +1713,8 @@ the smaller of the two elements on the top of the stack is removed. \\
 }
 \vspace{3mm}
 
+\pagebreak
+
 % OP_WITHIN
 \subsubsection{OP\_WITHIN}
 the input is the 3 elements at the top of the stack x, min, max where max is the top of the stack.  push 1 if x is greater than or equal to min and less than max, otherwise push 0. \\
@@ -1823,6 +1831,10 @@ The element at the top of the stack is hashed twice with SHA-256. \\
 }
 \vspace{3mm}
 
+\pagebreak
+
+\textit{The following opcodes were not defined during this project, due to their meaning being related to the larger running environment in which scripts are evaluated.}
+
 \subsubsection{OP\_CODESEPARATOR}
 \subsubsection{OP\_CHECKSIG}
 \subsubsection{OP\_CHECKSIGVERIFY}
@@ -1831,6 +1843,8 @@ The element at the top of the stack is hashed twice with SHA-256. \\
 \subsection{Locktime}
 \subsubsection{OP\_CHECKLOCKTIMEVERIFY (previously OP\_NOP2)}
 \subsubsection{OP\_CHECKSEQUENCEVERIFY (previously OP\_NOP3)}
+
+\vspace{2mm}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Disabled / Reserved / Invalid}
