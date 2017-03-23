@@ -99,21 +99,17 @@ Scripts exist in transactions and op-codes exist which directly reference their 
 
 We also provide small step semantics to describe the progression of evaluation of a script program. The local and global reduction rules are compact due to the language's inherent simplicity.
 
-\subsection{Application of Script Grammar}
-
-[Describe how grammar was used]
-
 \subsection{Difficulties encountered}
 
 $\bullet$ The source code of a script program is just a sequence of bytes and is not human-readable. To make documentation easier, the creators of the language defined an alias (\textit{opcode}) for each command. We first thought that the whole language could be described using only the opcodes, without referring to byte sequences as such, but the very semantics of certain commands made this impossible (see for example the \texttt{OP\_PUSHDATA} commands in Section 2 of the appendix). It took us a few tries to come up with a notation precise enough to describe source code as byte sequences, and yet elegant enough to allow concise expression of the semantics.
 
-$\bullet$ It was our hope that we could define operational semantics for op codes of previous versions of Script that caused crashes or other issues in the past.  Using these definitions, we would then show that the old definitions could be used to cause problems.  Unfortunately, there is very little documentation regarding how these errors came about.  The reference documentation itself only documents changes back to 2014 while most of the serious problems with Script were fixed in 2010. The only fix we were able to analyze was the change to \texttt{OP\_RETURN}.
+$\bullet$ It was our hope that we could define operational semantics for op codes of previous versions of Script that caused crashes or other issues in the past.  Using these definitions, we would then show that the old definitions could be used to cause problems.  Unfortunately, there is very little documentation regarding how these errors came about.  The reference documentation itself only documents changes back to 2014 while most of the serious problems with Script were fixed in 2010. Furthermore, whenever a weakness was discovered by the Bitcoin developers themselves, they did not tell everyone exactly how to exploit the language. Thus it is known that there was a vulnerability involving the \texttt{OP\_LEFT} command, and that it was disabled as a result, but to our knowledge there is no information online about what the problem was exactly. The only fix we were able to analyze was the change to \texttt{OP\_RETURN}.
 
 $\bullet$ \texttt{OP\_CHECKSIG} and related op-codes refer to the serialized form of the surrounding transaction. This is important as the signature which \texttt{OP\_CHECKSIG} verifies serves dually to prove that the author of the transaction is in control of the relevant private key (corresponding to the public key which hashes to the address to which the relevant locked bitcoins were spent) and in fact authored the transaction presently under consideration. Due to the complexities of referencing the serialized form the transaction with big-step semantic inference rules, we did not, after much struggle, provide such rules for such op-codes.
 
 \section{APPLICATIONS AND RESULTS}
 
-In this section, we make use of our formal specification to reason about execution time bounds of Script programs and to explain how a flaw in a prior version of the language was fixed.
+In this section, we make use of our formal description to reason about execution time bounds of Script programs and to explain how a flaw in a prior version of the language was fixed.
 
 \subsection{Programs written in the current version of Script halt within time linear in the length of the program}
 
